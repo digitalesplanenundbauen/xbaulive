@@ -2,22 +2,86 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <style>
+      #log {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        max-height: 40vh; overflow:auto; font: 12px/1.3 monospace;
+        background: rgba(0,0,0,.6); color:#0f0; padding:8px;
+      }
+      #permBtn {
+        position: fixed; top: 10px; right: 10px; z-index: 9999;
+      }
+    </style>
   </head>
   <body style="margin:0; overflow:hidden;">
+    <button id="permBtn">iOS Motion erlauben</button>
+    <div id="log">Log…</div>
+
     <a-scene
       embedded
+      vr-mode-ui="enabled: false"
       renderer="logarithmicDepthBuffer: true;"
       arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: true; gpsMinDistance: 1;"
     >
-      <!-- TEST-BOX nahe Koordinate -->
-      <a-box gps-entity-place="latitude: 47.86699377721532; longitude: 12.109188045827004"
+      <!-- Test-Box: setze Deine Ziel-Koordinaten -->
+      <a-box id="poi"
+             gps-entity-place="latitude: 47.86710; longitude: 12.10937"
              color="#4CC3D9" depth="2" height="2" width="2">
       </a-box>
 
-      <!-- Kamera mit GPS (zum Debug minAccuracy hochsetzen, damit er früher spawnt) -->
-      <a-camera gps-camera="minAccuracy: 2000" rotation-reader></a-camera>
+      <!-- KAMERA:
+           * Variante A (Simulation AN) -> MUSS immer etwas zeigen
+           * Variante B (Simulation AUS, echte GPS-Nutzung)
+      -->
+      <a-camera
+        id="cam"
+        gps-camera="minAccuracy: 2000; simulateLatitude: 47.86708; simulateLongitude: 12.10936;"
+        rotation-reader>
+      </a-camera>
+      <!-- Für echten GPS-Test: nächste Zeile benutzen und die Simulation oben entfernen
+      <a-camera id="cam" gps-camera="minAccuracy: 2000" rotation-reader></a-camera>
+      -->
     </a-scene>
+
+    <script>
+      const logEl = document.getElementById('log');
+      const log = (m) => { logEl.textContent += '\n' + m; logEl.scrollTop = logEl.scrollHeight; };
+
+      // iOS: Motion/Orientation-Permission (wichtig für Kompass/Heading)
+      document.getElementById('permBtn').onclick = async () => {
+        try {
+          if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') {
+            const r1 = await DeviceMotionEvent.requestPermission();
+            log('DeviceMotion permission: ' + r1);
+          } else {
+            log('DeviceMotion requestPermission nicht benötigt.');
+          }
+          if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const r2 = await DeviceOrientationEvent.requestPermission();
+            log('DeviceOrientation permission: ' + r2);
+          } else {
+            log('DeviceOrientation requestPermission nicht benötigt.');
+          }
+        } catch (e) { log('Permission error: ' + e); }
+      };
+
+      // AR.js gps-camera Events mitloggen
+      window.addEventListener('gps-camera-origin-set', (e) => {
+        log('[gps-camera-origin-set] origin lat=' + e.detail.position.latitude + ' lon=' + e.detail.position.longitude);
+      });
+      window.addEventListener('gps-camera-update-position', (e) => {
+        log('[gps-camera-update-position] lat=' + e.detail.position.latitude +
+            ' lon=' + e.detail.position.longitude +
+            ' acc=' + (e.detail.position.accuracy ?? 'n/a'));
+      });
+
+      // A-Frame ready
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+        log('A-Scene loaded.');
+      });
+    </script>
   </body>
 </html>
