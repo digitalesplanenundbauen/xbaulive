@@ -7,6 +7,19 @@
         <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
         <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
         <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+        <style>
+          #gpsinfo {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            color: #0f0;
+            font: 12px monospace;
+            padding: 6px;
+            z-index: 9999;
+          }
+        </style>
     </head>
 
     <body style="margin: 0; overflow: hidden;">
@@ -23,24 +36,26 @@
                 ></a-asset-item>
             </a-assets>
 
-                <a-entity
-                    look-at="[gps-camera]"
-                    animation-mixer="loop: repeat"
-                    gltf-model="#animated-asset"
-                    scale="1.0 1.0 1.0"
-                    gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
-                ></a-entity>
+            <a-entity
+                look-at="[gps-camera]"
+                animation-mixer="loop: repeat"
+                gltf-model="#animated-asset"
+                scale="1.0 1.0 1.0"
+                gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
+            ></a-entity>
 
-<!--  scale="0.013127487812072904 0.013127487812072904 0.013127487812072904" 
-                    
- <a-camera gps-camera="minAccuracy: 2000" rotation-reader></a-camera>
--->
-     <a-camera
-        id="cam"
-        gps-camera="minAccuracy: 2000; simulateLatitude: 47.8668463; simulateLongitude: 12.1090135;"
-        rotation-reader>
-      </a-camera>
-  
+            <a-camera gps-camera rotation-reader></a-camera>
         </a-scene>
+
+        <!-- Einfaches Fenster für GPS-Daten -->
+        <div id="gpsinfo">Warte auf GPS …</div>
+        <script>
+          const gpsInfo = document.getElementById('gpsinfo');
+          window.addEventListener('gps-camera-update-position', e => {
+            const p = e.detail.position;
+            gpsInfo.textContent = 
+              `Lat: ${p.latitude.toFixed(6)} | Lon: ${p.longitude.toFixed(6)} | Genauigkeit: ${p.accuracy || "?"}m`;
+          });
+        </script>
     </body>
 </html>
