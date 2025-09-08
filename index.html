@@ -1,156 +1,54 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-    <!-- AR.js (three.js location-only & A-Frame components) -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+      <!-- A-Frame itself -->
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
 
-    <style>
-      /* kleines UI-Panel */
-      #gpsPanel{
-        position:fixed; top:10px; left:10px; z-index:9999;
-        background:rgba(0,0,0,.65); color:#fff; padding:10px; border-radius:8px;
-        font:12px/1.3 system-ui, sans-serif; width:min(92vw, 320px);
-        backdrop-filter: blur(4px);
-      }
-      #gpsPanel input{
-        width:100%; box-sizing:border-box; margin:4px 0 8px; padding:6px;
-        border-radius:6px; border:1px solid rgba(255,255,255,.25);
-        background:rgba(255,255,255,.08); color:#fff; outline:none;
-      }
-      #gpsPanel button{
-        display:inline-block; margin:2px 4px 6px 0; padding:6px 10px;
-        border-radius:6px; border:1px solid rgba(255,255,255,.25);
-        background:rgba(255,255,255,.12); color:#fff; cursor:pointer;
-      }
-      #gpsPanel .row{ display:flex; gap:6px; }
-      #gpsPanel .row > *{ flex:1; }
-      #gpsPanel .muted{ color:#cfe; opacity:.8; }
-      #gpsPanel .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    </style>
-  </head>
+<!-- Pure three.js code that the A-Frame components use for location-based AR -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js'></script>
 
-  <body style="margin: 0; overflow: hidden;">
-    <a-scene
-      renderer="logarithmicDepthBuffer: true;"
-      embedded
-      loading-screen="enabled: false;"
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-    >
-      <a-assets>
-        <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
-      </a-assets>
+<!-- AR.js A-Frame components -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js'></script>
+      
+    </head>
 
-      <a-entity
-        look-at="[gps-camera]"
-        animation-mixer="loop: repeat"
-        gltf-model="#animated-asset"
-        scale="1.0 1.0 1.0"
-        gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
-      ></a-entity>
+    <body style="margin: 0; overflow: hidden;">
+        <a-scene
+            renderer="logarithmicDepthBuffer: true;"
+            embedded
+            loading-screen="enabled: false;"
+            arjs="sourceType: webcam; debugUIEnabled: false;"
+        >
+            <a-assets>
+                <a-asset-item
+                    id="animated-asset"
+                    src="assets/asset.glb"
+                ></a-asset-item>
+            </a-assets>
 
-      <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
-    </a-scene>
+                <a-entity
+                    look-at="[gps-camera]"
+                    animation-mixer="loop: repeat"
+                    gltf-model="#animated-asset"
+                    scale="1.0 1.0 1.0"
+                    gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
+                ></a-entity>
 
-    <!-- ---------- GPS-INFO & STEUERUNG (minimal-invasiv) ---------- -->
-    <div id="gpsPanel">
-      <div style="font-weight:600; margin-bottom:6px;">GPS / Fake-GPS</div>
+          <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
 
-      <label>Latitude</label>
-      <input id="inLat" type="number" step="0.0000001" placeholder="z. B. 47.8676806" />
+<!--  scale="0.013127487812072904 0.013127487812072904 0.013127487812072904" 
+                    
+ 
 
-      <label>Longitude</label>
-      <input id="inLon" type="number" step="0.0000001" placeholder="z. B. 12.1091045" />
-
-      <div class="row">
-        <div>
-          <label>Altitude (m)</label>
-          <input id="inAlt" type="number" step="0.1" placeholder="optional" />
-        </div>
-        <div>
-          <label>Accuracy (m)</label>
-          <input id="inAcc" type="number" step="1" placeholder="0" />
-        </div>
-      </div>
-
-      <div>
-        <button id="btnGet">GPS holen</button>
-        <button id="btnApply">Fake anwenden</button>
-      </div>
-
-      <div class="muted mono" id="live">
-        Letzte AR.js-Position: –
-      </div>
-    </div>
-
-    <script>
-      // Referenzen
-      const inLat = document.getElementById('inLat');
-      const inLon = document.getElementById('inLon');
-      const inAlt = document.getElementById('inAlt');
-      const inAcc = document.getElementById('inAcc');
-      const live  = document.getElementById('live');
-      const btnGet = document.getElementById('btnGet');
-      const btnApply = document.getElementById('btnApply');
-
-      // 1) Echte AR.js-Updates nur anzeigen (schreiben NICHT die Inputs voll)
-      window.addEventListener('gps-camera-update-position', (e) => {
-        const p = e.detail?.position || {};
-        const lat = p.latitude?.toFixed?.(6) ?? '?';
-        const lon = p.longitude?.toFixed?.(6) ?? '?';
-        const acc = (p.accuracy != null) ? Math.round(p.accuracy) : '?';
-        const alt = (p.altitude != null) ? p.altitude.toFixed(1) : '–';
-        live.textContent = `Letzte AR.js-Position → Lat ${lat}, Lon ${lon}, Alt ${alt}, Acc ${acc} m`;
-      });
-
-      // 2) Button: Browser-Geoposition holen und in Inputs eintragen
-      btnGet.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          alert('Geolocation API nicht verfügbar.');
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const { latitude, longitude, altitude, accuracy } = pos.coords;
-            inLat.value = (latitude ?? '').toString();
-            inLon.value = (longitude ?? '').toString();
-            inAlt.value = (altitude ?? '').toString();
-            inAcc.value = Math.round(accuracy ?? 0).toString();
-          },
-          (err) => {
-            alert(`GPS-Fehler: ${err.code} – ${err.message}`);
-          },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
-      });
-
-      // 3) Button: Fake anwenden – simuliert AR.js-GPS-Events mit den Inputwerten
-      let originSet = false;
-      btnApply.addEventListener('click', () => {
-        const lat = parseFloat(inLat.value);
-        const lon = parseFloat(inLon.value);
-        const alt = inAlt.value === '' ? null : parseFloat(inAlt.value);
-        const acc = inAcc.value === '' ? 0 : parseFloat(inAcc.value);
-
-        if (!isFinite(lat) || !isFinite(lon)) {
-          alert('Bitte gültige Latitude/Longitude eingeben.');
-          return;
-        }
-
-        const detail = { position: { latitude: lat, longitude: lon, accuracy: acc } };
-        if (alt !== null && isFinite(alt)) detail.position.altitude = alt;
-
-        if (!originSet) {
-          window.dispatchEvent(new CustomEvent('gps-camera-origin-set', { detail }));
-          originSet = true;
-        }
-        window.dispatchEvent(new CustomEvent('gps-camera-update-position', { detail }));
-      });
-    </script>
-  </body>
+     <a-camera
+        id="cam"
+        gps-camera="minAccuracy: 2000; simulateLatitude: 47.8668463; simulateLongitude: 12.1090135;"
+        rotation-reader>
+      </a-camera>
+  -->
+        </a-scene>
+    </body>
 </html>
