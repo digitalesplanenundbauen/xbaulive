@@ -1,146 +1,58 @@
 <!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GPS Koordinaten</title>
-  <style>
-    :root { font-family: system-ui, Arial, sans-serif; }
-    body { margin: 0; padding: 16px; background:#f7f7f8; }
-    h1 { font-size: 1.25rem; margin: 0 0 12px; }
-    .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
-    .row { display:flex; justify-content:space-between; margin:8px 0; }
-    .k { color:#555; }
-    .v { font-weight:600; }
-    .muted { color:#777; font-size:.9rem; }
-    button { padding:10px 14px; border:0; border-radius:10px; margin-right:8px; }
-    #start { background:#0b6; color:#fff; }
-    #stop { background:#c33; color:#fff; }
-    #status { margin-top:10px; }
-    code { background:#f0f0f0; padding:2px 6px; border-radius:6px; }
-  </style>
-</head>
-<body>
-  <h1>GPS Koordinaten</h1>
-  <div class="card">
-    <div class="row"><span class="k">Breite (Lat):</span><span class="v" id="lat">–</span></div>
-    <div class="row"><span class="k">Länge (Lon):</span><span class="v" id="lon">–</span></div>
-    <div class="row"><span class="k">Genauigkeit:</span><span class="v" id="acc">–</span></div>
-    <div class="row"><span class="k">Höhe:</span><span class="v" id="alt">–</span></div>
-    <div class="row"><span class="k">Vert. Genauigkeit:</span><span class="v" id="altacc">–</span></div>
-    <div class="row"><span class="k">Geschwindigkeit:</span><span class="v" id="speed">–</span></div>
-    <div class="row"><span class="k">Richtung:</span><span class="v" id="heading">–</span></div>
-    <div class="row"><span class="k">Zeitstempel:</span><span class="v" id="ts">–</span></div>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+       <!-- <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+        <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+      -->
+      <!-- A-Frame itself -->
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
 
-    <div style="margin-top:12px;">
-      <button id="start">Start</button>
-      <button id="stop" disabled>Stopp</button>
-      <button id="copy">Koordinaten kopieren</button>
-    </div>
-    <div id="status" class="muted">Warte auf GPS…</div>
-  </div>
+<!-- Pure three.js code that the A-Frame components use for location-based AR -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js'></script>
 
-  <p class="muted" style="margin-top:12px;">
-    Tipp: Aktiviere Standort/GPS, geh nach draußen mit freier Sicht zum Himmel. Auf vielen Geräten funktioniert Geolocation nur über <code>https</code>.
-  </p>
+<!-- AR.js A-Frame components -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js'></script>
+      
+    </head>
 
-  <script>
-    const els = {
-      lat: document.getElementById('lat'),
-      lon: document.getElementById('lon'),
-      acc: document.getElementById('acc'),
-      alt: document.getElementById('alt'),
-      altacc: document.getElementById('altacc'),
-      speed: document.getElementById('speed'),
-      heading: document.getElementById('heading'),
-      ts: document.getElementById('ts'),
-      status: document.getElementById('status'),
-      start: document.getElementById('start'),
-      stop: document.getElementById('stop'),
-      copy: document.getElementById('copy'),
-    };
+    <body style="margin: 0; overflow: hidden;">
+        <a-scene
+            renderer="logarithmicDepthBuffer: true;"
+            embedded
+            loading-screen="enabled: false;"
+            arjs="sourceType: webcam; debugUIEnabled: false;"
+        >
+            <a-assets>
+                <a-asset-item
+                    id="animated-asset"
+                    src="assets/asset.glb"
+                ></a-asset-item>
+            </a-assets>
 
-    let watchId = null;
+                <a-entity
+                    look-at="[gps-camera]"
+                    animation-mixer="loop: repeat"
+                    gltf-model="#animated-asset"
+                    scale="1.0 1.0 1.0"
+                    gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
+                ></a-entity>
 
-    function fmt(n, unit) {
-      if (n === null || n === undefined || Number.isNaN(n)) return '–';
-      return `${n.toFixed(6)} ${unit || ''}`.trim();
-    }
+          <a-camera gps-camera="minAccuracy: 2000" rotation-reader></a-camera>
 
-    function fmt0(n, unit) {
-      if (n === null || n === undefined || Number.isNaN(n)) return '–';
-      return `${n.toFixed(0)} ${unit || ''}`.trim();
-    }
+<!--  scale="0.013127487812072904 0.013127487812072904 0.013127487812072904" 
+                    
+ 
 
-    function onUpdate(pos) {
-      const c = pos.coords;
-      els.lat.textContent = fmt(c.latitude);
-      els.lon.textContent = fmt(c.longitude);
-      els.acc.textContent = c.accuracy ? fmt0(c.accuracy, 'm') : '–';
-      els.alt.textContent = (c.altitude != null) ? fmt(c.altitude, 'm') : '–';
-      els.altacc.textContent = (c.altitudeAccuracy != null) ? fmt0(c.altitudeAccuracy, 'm') : '–';
-      els.speed.textContent = (c.speed != null) ? fmt(c.speed, 'm/s') : '–';
-      els.heading.textContent = (c.heading != null && c.heading >= 0) ? fmt0(c.heading, '°') : '–';
-      els.ts.textContent = new Date(pos.timestamp).toLocaleString();
-      els.status.textContent = 'Position aktualisiert.';
-    }
-
-    function onError(err) {
-      const messages = {
-        1: 'Zugriff verweigert. Bitte Standortfreigabe erlauben.',
-        2: 'Position nicht verfügbar. Eventuell schlechtes Signal.',
-        3: 'Zeitüberschreitung bei der Positionsbestimmung.'
-      };
-      els.status.textContent = `Fehler: ${messages[err.code] || err.message}`;
-    }
-
-    function start() {
-      if (!('geolocation' in navigator)) {
-        els.status.textContent = 'Geolocation wird von diesem Browser nicht unterstützt.';
-        return;
-      }
-      if (watchId !== null) return;
-
-      els.status.textContent = 'Warte auf GPS…';
-      watchId = navigator.geolocation.watchPosition(onUpdate, onError, {
-        enableHighAccuracy: true,   // bestmögliche Genauigkeit (mehr Akkuverbrauch)
-        maximumAge: 1000,           // bis zu 1 s alte Position wiederverwenden
-        timeout: 20000              // nach 20 s aufgeben
-      });
-      els.start.disabled = true;
-      els.stop.disabled = false;
-    }
-
-    function stop() {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-        els.status.textContent = 'Gestoppt.';
-        els.start.disabled = false;
-        els.stop.disabled = true;
-      }
-    }
-
-    function copyCoords() {
-      const lat = els.lat.textContent;
-      const lon = els.lon.textContent;
-      if (lat === '–' || lon === '–') {
-        els.status.textContent = 'Keine Koordinaten zum Kopieren.';
-        return;
-      }
-      const text = `${lat.replace(' –','')} , ${lon.replace(' –','')}`;
-      navigator.clipboard.writeText(text).then(
-        () => els.status.textContent = 'Koordinaten kopiert.',
-        () => els.status.textContent = 'Kopieren nicht möglich.'
-      );
-    }
-
-    els.start.addEventListener('click', start);
-    els.stop.addEventListener('click', stop);
-    els.copy.addEventListener('click', copyCoords);
-
-    // Optional: automatisch starten
-    start();
-  </script>
-</body>
+     <a-camera
+        id="cam"
+        gps-camera="minAccuracy: 2000; simulateLatitude: 47.8668463; simulateLongitude: 12.1090135;"
+        rotation-reader>
+      </a-camera>
+  -->
+        </a-scene>
+    </body>
 </html>
