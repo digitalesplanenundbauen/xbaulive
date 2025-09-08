@@ -21,28 +21,29 @@
         <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
       </a-assets>
 
-      <!-- Wrapper für den festen Offset -->
-      <a-entity id="worldRoot" rotation="0 0 0">
-        <a-entity
-          look-at="[gps-camera]"
-          animation-mixer="loop: repeat"
-          gltf-model="#animated-asset"
-          scale="1 1 1"
-          gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
-        ></a-entity>
+      <!-- GPS-Anker (setzt NUR die Geo-Position) -->
+      <a-entity id="geoAnchor" gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;">
+        <!-- Offset-Knoten: hier drehen wir pauschal für iOS -->
+        <a-entity id="offsetNode" rotation="0 0 0">
+          <!-- Dein Modell -->
+          <a-entity
+            id="model"
+            animation-mixer="loop: repeat"
+            gltf-model="#animated-asset"
+            scale="1 1 1">
+          </a-entity>
+        </a-entity>
       </a-entity>
 
       <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
     </a-scene>
 
     <script>
-      // einfache Erkennung von iOS (iPhone, iPad, iPod)
+      // Einfach: auf allen iOS-Browsern festen 90°-Offset anwenden
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (isIOS) {
-        // festen 90° Offset anwenden
-        document.getElementById('worldRoot')
-                .setAttribute('rotation', '0 90 0');
-        // falls falsch herum: '0 -90 0'
+        document.getElementById('offsetNode').setAttribute('rotation', '0 90 0');
+        // Falls verkehrt herum: '0 -90 0'
       }
     </script>
   </body>
