@@ -47,15 +47,27 @@
             <a-camera gps-camera rotation-reader></a-camera>
         </a-scene>
 
-        <!-- Einfaches Fenster für GPS-Daten -->
         <div id="gpsinfo">Warte auf GPS …</div>
-        <script>
-          const gpsInfo = document.getElementById('gpsinfo');
-          window.addEventListener('gps-camera-update-position', e => {
-            const p = e.detail.position;
-            gpsInfo.textContent = 
-              `Lat: ${p.latitude.toFixed(6)} | Lon: ${p.longitude.toFixed(6)} | Genauigkeit: ${p.accuracy || "?"}m`;
-          });
-        </script>
+<script>
+  const gpsInfo = document.getElementById('gpsinfo');
+
+  // AR.js Updates anzeigen (wie zuvor)
+  window.addEventListener('gps-camera-update-position', e => {
+    const p = e.detail.position || {};
+    gpsInfo.textContent =
+      `Lat: ${p.latitude?.toFixed?.(6) ?? "?"} | Lon: ${p.longitude?.toFixed?.(6) ?? "?"} | Genauigkeit: ${p.accuracy ?? "?"} m`;
+  });
+
+  // Geolocation-Fehler aus dem Browser abfangen & anzeigen
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      () => {}, // ok – nichts tun
+      (err) => { gpsInfo.textContent = `GPS-Fehler: ${err.code} – ${err.message}`; },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  } else {
+    gpsInfo.textContent = "GPS-Fehler: Geolocation API nicht verfügbar.";
+  }
+</script>
     </body>
 </html>
