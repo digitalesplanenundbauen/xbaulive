@@ -20,7 +20,7 @@
             renderer="logarithmicDepthBuffer: true;"
             embedded
             loading-screen="enabled: false;"
-            arjs="sourceType: webcam; debugUIEnabled: false;"
+            arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: true;"
         >
             <a-assets>
                 <a-asset-item
@@ -31,7 +31,6 @@
 
                 <a-entity
                     look-at="[gps-camera]"
-                    animation-mixer="loop: repeat"
                     gltf-model="#animated-asset"
                     scale="1.0 1.0 1.0"
                     gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
