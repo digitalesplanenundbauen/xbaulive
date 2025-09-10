@@ -12,6 +12,7 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 
     <style>
+      /* Fixes Infofenster am unteren Rand */
       #info-box {
         position: fixed;
         bottom: 0;
@@ -49,6 +50,7 @@
   </head>
 
   <body style="margin: 0; overflow: hidden;">
+    <!-- ================= AR-Szene ================= -->
     <a-scene
       renderer="logarithmicDepthBuffer: true;"
       embedded
@@ -65,13 +67,16 @@
         gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
       ></a-entity>
 
+      <!-- Startwert: minAccuracy 50 (AR.js akzeptiert nichts unter 50 als sinnvolle Untergrenze) -->
       <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
     </a-scene>
 
+    <!-- ================= UI: Infofenster ================= -->
     <div id="info-box">
-      <div>Version: 1.2</div>
+      <div>Version: 1.3</div>
       <div id="coords">AR.js: Lat – | Lon – | Acc – m</div>
 
+      <!-- Zeile 1: Fix Position 1 (n Messungen, gewichtet mitteln, festsetzen) -->
       <div class="row">
         <label for="samples">Messungen:</label>
         <input id="samples" type="number" min="3" max="50" step="1" value="12" />
@@ -79,12 +84,14 @@
         <span id="status"></span>
       </div>
 
+      <!-- Zeile 2: Fix Position 2 (messen bis Zielgenauigkeit, festsetzen) -->
       <div class="row">
         <label for="accTarget">Zielgenauigkeit (m):</label>
         <input id="accTarget" type="number" min="1" step="1" value="2" />
         <button id="btnFix2">Fix Position 2</button>
       </div>
 
+      <!-- Zeile 3: Auto Position (echtes GPS, Mindestgenauigkeit wird direkt an AR.js weitergereicht) -->
       <div class="row">
         <label for="minAccInput">Mindestgenauigkeit:</label>
         <input id="minAccInput" type="number" min="1" step="1" value="100" />
@@ -93,18 +100,71 @@
     </div>
 
     <script>
+      /* ================= Allgemeine Helfer & Anzeige ================= */
+
       const coordsEl = document.getElementById("coords");
+      const stat = document.getElementById("status");
+
+      // Zeigt AR.js-Positionsupdates an (nur Info für dich)
       window.addEventListener("gps-camera-update-position", (e) => {
         const p = e.detail?.position || {};
-        const lat =
-          typeof p.latitude === "number" ? p.latitude.toFixed(6) : "–";
-        const lon =
-          typeof p.longitude === "number" ? p.longitude.toFixed(6) : "–";
-        const acc =
-          typeof p.accuracy === "number" ? Math.round(p.accuracy) : "–";
+        const lat = typeof p.latitude === "number" ? p.latitude.toFixed(6) : "–";
+        const lon = typeof p.longitude === "number" ? p.longitude.toFixed(6) : "–";
+        const acc = typeof p.accuracy === "number" ? Math.round(p.accuracy) : "–";
         coordsEl.textContent = `AR.js: Lat ${lat} | Lon ${lon} | Acc ${acc} m`;
       });
 
+      // Zugriff auf gps-camera Element/Komponente
+      function getGpsCameraEl() { return document.querySelector("[gps-camera]"); }
+      function getGpsCameraComponent() {
+        const camEl = getGpsCameraEl();
+        return camEl?.components?.["gps-camera"] || null;
+      }
+
+      // Setzt eine feste Position, indem wir kurz simulateLat/Lon setzen, anwenden (play) und wieder pausieren
+      async function setFixedPosition(lat, lon, accForInfo = 10) {
+        const camEl = getGpsCameraEl();
+        const camCmp = getGpsCameraComponent();
+        if (!camEl || !camCmp) throw new Error("gps-camera nicht bereit");
+
+        // 1) Simulation setzen (diese Werte übernimmt AR.js wie echte GPS-Updates)
+        camEl.setAttribute(
+          "gps-camera",
+          `simulateLatitude: ${lat}; simulateLongitude: ${lon}; minAccuracy: 1`
+        );
+
+        // 2) Kurz starten, damit AR.js die simulierte Position verarbeitet
+        camCmp.play();
+
+        // 3) Eine Eventrunde warten (nächster Frame)
+        await new Promise((r) => requestAnimationFrame(r));
+        // (Optional) eine zweite Runde, um sicherzugehen
+        await new Promise((r) => requestAnimationFrame(r));
+
+        // 4) Infozeile selbst aktualisieren (weil Simulation evtl. kein Event rausfeuert)
+        coordsEl.textContent = `AR.js (fix): Lat ${lat.toFixed(6)} | Lon ${lon.toFixed(
+          6
+        )} | Acc ~${accForInfo} m`;
+
+        // 5) Wieder pausieren = Position „fest“
+        camCmp.pause();
+      }
+
+      // Entfernt Simulation & stellt echten GPS-Auto-Mode her
+      function enableAutoPosition(minAcc) {
+        const camEl = getGpsCameraEl();
+        const camCmp = getGpsCameraComponent();
+        if (!camEl || !camCmp) throw new Error("gps-camera nicht bereit");
+
+        // Komponente neu setzen OHNE simulate-Keys (damit Simulation sicher weg ist)
+        camEl.removeAttribute("gps-camera");
+        camEl.setAttribute("gps-camera", `minAccuracy: ${minAcc}`);
+
+        // Echte Geolokation wieder aktivieren
+        camCmp.play();
+      }
+
+      // Rohmessung (einmalig)
       async function getPos() {
         return new Promise((res, rej) =>
           navigator.geolocation.getCurrentPosition(res, rej, {
@@ -114,10 +174,9 @@
           })
         );
       }
-      function sleep(ms) {
-        return new Promise((r) => setTimeout(r, ms));
-      }
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+      // Gewichtetes Mittel aus n Messungen (nur Fix-Funktionen; Auto nutzt gps-camera direkt)
       async function refine(n = 10, onProgress = () => {}, isCancelled = () => false) {
         const pts = [];
         for (let i = 0; i < n; i++) {
@@ -129,7 +188,7 @@
               isFinite(c.latitude) &&
               isFinite(c.longitude) &&
               isFinite(c.accuracy) &&
-              c.accuracy <= 100
+              c.accuracy <= 100 // <=100 m akzeptieren (nur Fix, nicht Auto)
             ) {
               pts.push({ lat: c.latitude, lon: c.longitude, acc: c.accuracy });
             }
@@ -137,36 +196,24 @@
           } catch (_) {}
           await sleep(400);
         }
-        if (pts.length === 0)
-          throw new Error("Keine gültigen GPS-Messungen erhalten.");
-        let sw = 0,
-          slat = 0,
-          slon = 0;
+        if (pts.length === 0) throw new Error("Keine gültigen GPS-Messungen erhalten.");
+        let sw = 0, slat = 0, slon = 0;
         pts.forEach((p) => {
           const w = 1 / Math.max(1, p.acc * p.acc);
-          sw += w;
-          slat += w * p.lat;
-          slon += w * p.lon;
+          sw += w; slat += w * p.lat; slon += w * p.lon;
         });
         return { lat: slat / sw, lon: slon / sw };
       }
 
-      async function refineUntil(
-        targetAcc = 2,
-        onProgress = () => {},
-        isCancelled = () => false
-      ) {
+      // Messen bis Zielgenauigkeit erreicht (nur Fix 2)
+      async function refineUntil(targetAcc = 2, onProgress = () => {}, isCancelled = () => false) {
         const pts = [];
         while (true) {
           if (isCancelled()) throw new Error("abgebrochen");
           try {
             const { coords: c } = await getPos();
             if (isCancelled()) throw new Error("abgebrochen");
-            if (
-              isFinite(c.latitude) &&
-              isFinite(c.longitude) &&
-              isFinite(c.accuracy)
-            ) {
+            if (isFinite(c.latitude) && isFinite(c.longitude) && isFinite(c.accuracy)) {
               pts.push({ lat: c.latitude, lon: c.longitude, acc: c.accuracy });
               onProgress(pts.length, null, c.accuracy);
               if (c.accuracy <= targetAcc) break;
@@ -174,147 +221,110 @@
           } catch (_) {}
           await sleep(400);
         }
+        // Sehr schlechte >100 m rausfiltern; wenn dann nichts übrig, nimm alle
         const filtered = pts.filter((p) => p.acc <= 100);
         const use = filtered.length ? filtered : pts;
-        let sw = 0,
-          slat = 0,
-          slon = 0;
+        let sw = 0, slat = 0, slon = 0;
         use.forEach((p) => {
           const w = 1 / Math.max(1, p.acc * p.acc);
-          sw += w;
-          slat += w * p.lat;
-          slon += w * p.lon;
+          sw += w; slat += w * p.lat; slon += w * p.lon;
         });
         return { lat: slat / sw, lon: slon / sw, samples: use.length };
       }
 
+      /* =================== Abbruch-Handling =================== */
+
+      // Jede Aktion invalidiert die vorherige, ohne Buttons zu sperren
+      let activeOpId = 0;
+      const beginOp = () => (++activeOpId);
+      const isCancelled = (id) => id !== activeOpId;
+      const cancelActive = () => { activeOpId++; };
+
+      /* =================== UI-Logik / Buttons =================== */
+
       const btnFix1 = document.getElementById("btnFix1");
       const btnFix2 = document.getElementById("btnFix2");
       const btnAuto = document.getElementById("btnAuto");
-      const stat = document.getElementById("status");
       const sampI = document.getElementById("samples");
       const accTargetI = document.getElementById("accTarget");
       const minAccI = document.getElementById("minAccInput");
 
-      let originSet = false;
-
-      function getGpsCameraEl() {
-        return document.querySelector("[gps-camera]");
-      }
-      function getGpsCameraComponent() {
-        const camEl = getGpsCameraEl();
-        return camEl?.components?.["gps-camera"] || null;
-      }
-      function applyARPosition(lat, lon, acc = 10) {
-        const detail = { position: { latitude: lat, longitude: lon, accuracy: acc } };
-        if (!originSet) {
-          window.dispatchEvent(new CustomEvent("gps-camera-origin-set", { detail }));
-          originSet = true;
-        }
-        window.dispatchEvent(new CustomEvent("gps-camera-update-position", { detail }));
-      }
-
-      // Abbruch-Management
-      let activeOpId = 0;
-      function beginOp() {
-        activeOpId += 1;
-        return activeOpId;
-      }
-      function isCancelled(myId) {
-        return myId !== activeOpId;
-      }
-      function cancelActive() {
-        activeOpId += 1;
-      }
-
-      // Fix Position 1
+      // Fix Position 1: n Messungen, mitteln, an AR.js übergeben, festsetzen
       btnFix1.addEventListener("click", async () => {
         cancelActive();
         const myId = beginOp();
+
         const n = Math.min(50, Math.max(3, parseInt(sampI.value || "12", 10)));
         stat.textContent = `Fix1: messe… (0/${n})`;
+
         try {
           const best = await refine(
             n,
             (i, total, accNow) => {
               if (isCancelled(myId)) throw new Error("abgebrochen");
-              stat.textContent = `Fix1: (${i}/${total}) | Genauigkeit: ${Math.round(
-                accNow || 0
-              )} m`;
+              stat.textContent = `Fix1: (${i}/${total}) | Genauigkeit: ${Math.round(accNow || 0)} m`;
             },
             () => isCancelled(myId)
           );
           if (isCancelled(myId)) throw new Error("abgebrochen");
-          stat.textContent = `Fix1 gesetzt: Lat ${best.lat.toFixed(
-            6
-          )} | Lon ${best.lon.toFixed(6)}`;
-          applyARPosition(best.lat, best.lon, 10);
-          const gpsCam = getGpsCameraComponent();
-          if (gpsCam) {
-            gpsCam.pause();
-            stat.textContent += " | (festgesetzt)";
-          }
+
+          // >>> WICHTIG: verfeinerte Position wirklich an AR.js anwenden
+          await setFixedPosition(best.lat, best.lon, 10);
+          stat.textContent = `Fix1 fest: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)}`;
         } catch (e) {
-          if (e?.message !== "abgebrochen")
-            stat.textContent = "Fehler: " + (e?.message || e);
+          if (e?.message !== "abgebrochen") stat.textContent = "Fehler: " + (e?.message || e);
           else stat.textContent = "Abgebrochen.";
         }
       });
 
-      // Fix Position 2
+      // Fix Position 2: messen bis Zielgenauigkeit erreicht, anwenden, festsetzen
       btnFix2.addEventListener("click", async () => {
         cancelActive();
         const myId = beginOp();
+
         const target = Math.max(1, parseInt(accTargetI.value || "2", 10));
         stat.textContent = `Fix2: Ziel ${target} m – messe…`;
+
         try {
           const best = await refineUntil(
             target,
             (count, _t, accNow) => {
               if (isCancelled(myId)) throw new Error("abgebrochen");
-              stat.textContent = `Fix2: Messung ${count} | aktuelle Genauigkeit: ${Math.round(
-                accNow || 0
-              )} m (Ziel: ${target} m)`;
+              stat.textContent = `Fix2: Messung ${count} | aktuelle Genauigkeit: ${Math.round(accNow || 0)} m (Ziel: ${target} m)`;
             },
             () => isCancelled(myId)
           );
           if (isCancelled(myId)) throw new Error("abgebrochen");
-          stat.textContent = `Fix2 gesetzt: Lat ${best.lat.toFixed(
-            6
-          )} | Lon ${best.lon.toFixed(6)} (n=${best.samples})`;
-          applyARPosition(best.lat, best.lon, target);
-          const gpsCam = getGpsCameraComponent();
-          if (gpsCam) {
-            gpsCam.pause();
-            stat.textContent += " | (festgesetzt)";
-          }
+
+          // >>> WICHTIG: verfeinerte Position wirklich an AR.js anwenden
+          await setFixedPosition(best.lat, best.lon, target);
+          stat.textContent = `Fix2 fest: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)} (n=${best.samples})`;
         } catch (e) {
-          if (e?.message !== "abgebrochen")
-            stat.textContent = "Fehler: " + (e?.message || e);
+          if (e?.message !== "abgebrochen") stat.textContent = "Fehler: " + (e?.message || e);
           else stat.textContent = "Abgebrochen.";
         }
       });
 
-      // Auto Position
+      // Auto Position: echte Geolocation reaktivieren, Mindestgenauigkeit direkt in AR.js setzen
       btnAuto.addEventListener("click", () => {
         cancelActive();
-        const gpsCamEl = getGpsCameraEl();
-        const gpsCam = getGpsCameraComponent();
-        if (!gpsCamEl || !gpsCam) {
-          stat.textContent = "gps-camera nicht bereit";
-          return;
-        }
+
+        // Mindestgenauigkeit aus Feld lesen und auf >= 50 clampen
         let minAcc = Math.max(1, parseInt(minAccI.value || "100", 10));
         if (minAcc < 50) {
           minAcc = 50;
           minAccI.value = 50;
-          stat.textContent =
-            "Mindestgenauigkeit <50 nicht erlaubt, auf 50 gesetzt.";
+          stat.textContent = "Mindestgenauigkeit < 50 nicht erlaubt, auf 50 gesetzt.";
         } else {
           stat.textContent = `Auto-Position aktiv (Mindestgenauigkeit: ${minAcc})`;
         }
-        gpsCamEl.setAttribute("gps-camera", `minAccuracy: ${minAcc}`);
-        gpsCam.play();
+
+        try {
+          // Simulation entfernen & echten GPS-Modus aktivieren
+          enableAutoPosition(minAcc);
+        } catch (e) {
+          stat.textContent = "Fehler (Auto): " + (e?.message || e);
+        }
       });
     </script>
   </body>
