@@ -45,16 +45,16 @@
         gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;">
       </a-entity>
 
-      <!-- wird beim Laden auf Auto (minAccuracy:100) gesetzt -->
+      <!-- Wird unten beim Laden auf Auto (minAccuracy:100) gesetzt -->
       <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
     <!-- ================= UI: Infofenster ================= -->
     <div id="info-box">
-      <div>Version: 1.7</div>
+      <div>Version: 1.8</div>
       <div id="coords">AR.js: warte auf Position …</div>
 
-      <!-- Zeile 1: Fix Position 1 -->
+      <!-- Zeile 1: Fix Position 1 (Messungen ≤ Mindestgenauigkeit) -->
       <div class="row">
         <label for="samples">Messungen:</label>
         <input id="samples" type="number" min="3" max="50" step="1" value="12" />
@@ -62,14 +62,14 @@
         <span id="status"></span>
       </div>
 
-      <!-- Zeile 2: Fix Position 2 (mind. 3 gute Messungen) -->
+      <!-- Zeile 2: Fix Position 2 (10 „gute“ Messungen ≤ Zielgenauigkeit) -->
       <div class="row">
         <label for="accTarget">Zielgenauigkeit (m):</label>
         <input id="accTarget" type="number" min="1" step="1" value="2" />
         <button id="btnFix2">Fix Position 2</button>
       </div>
 
-      <!-- Zeile 3: Auto Position -->
+      <!-- Zeile 3: Auto Position (echtes GPS; Mindestgenauigkeit direkt in AR.js) -->
       <div class="row">
         <label for="minAccInput">Mindestgenauigkeit:</label>
         <input id="minAccInput" type="number" min="1" step="1" value="100" />
@@ -83,9 +83,9 @@
       const coordsEl = document.getElementById("coords");
       const stat     = document.getElementById("status");
 
-      // Modus: "auto" zeigt nur Events ≤ currentAutoMinAcc; "fixed" lässt Anzeige stehen
+      // Modus: "auto" (zeigt nur Events ≤ currentAutoMinAcc) oder "fixed" (Anzeige bleibt stehen)
       let mode = "auto";
-      let currentAutoMinAcc = 100;
+      let currentAutoMinAcc = 100;  // nur für Anzeige/Filter im Auto-Modus
 
       // AR.js-Events im AUTO-Modus gefiltert anzeigen
       window.addEventListener("gps-camera-update-position", (e) => {
@@ -93,7 +93,8 @@
         const p = e.detail?.position || {};
         if (typeof p.latitude !== "number" || typeof p.longitude !== "number" || typeof p.accuracy !== "number") return;
         if (p.accuracy <= currentAutoMinAcc) {
-          coordsEl.textContent = `AR.js: Lat ${p.latitude.toFixed(6)} | Lon ${p.longitude.toFixed(6)} | Acc ${Math.round(p.accuracy)} m`;
+          coordsEl.textContent =
+            `AR.js: Lat ${p.latitude.toFixed(6)} | Lon ${p.longitude.toFixed(6)} | Acc ${Math.round(p.accuracy)} m`;
         }
       });
 
@@ -110,7 +111,7 @@
         const camCmp = getGpsCameraCmp();
         if (!camEl || !camCmp) throw new Error("gps-camera nicht bereit");
 
-        // Simulation an bestehendem Component setzen; minAccuracy klein, damit sie genommen wird
+        // Simulation an bestehendem Component setzen
         camEl.setAttribute("gps-camera", {
           simulateLatitude: lat,
           simulateLongitude: lon,
@@ -121,7 +122,9 @@
         await nextFrame(); await nextFrame();
         camCmp.pause();
 
-        coordsEl.textContent = `AR.js: Lat ${lat.toFixed(6)} | Lon ${lon.toFixed(6)} | Acc ${shownAcc != null ? Math.round(shownAcc) : 0} m`;
+        // Anzeige ohne „~“ und ohne „(fix)“
+        coordsEl.textContent =
+          `AR.js: Lat ${lat.toFixed(6)} | Lon ${lon.toFixed(6)} | Acc ${shownAcc != null ? Math.round(shownAcc) : 0} m`;
         mode = "fixed";
       }
 
@@ -130,7 +133,7 @@
         const camEl = getGpsCameraEl();
         if (!camEl) throw new Error("gps-camera nicht bereit");
 
-        // Component sauber neu setzen → Simulation sicher weg
+        // Component neu setzen (Simulation sicher entfernen)
         if (camEl.hasAttribute("gps-camera")) {
           camEl.removeAttribute("gps-camera");
           await nextFrame();
@@ -158,70 +161,63 @@
       }
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-      // Laufender (gewichteter) Mittelwert der Accuracy
-      function runningAccMean(pts) {
-        if (!pts.length) return undefined;
-        let sw=0, sacc=0;
-        pts.forEach(p => { const w = 1 / Math.max(1, p.acc * p.acc); sw+=w; sacc+=w*p.acc; });
-        return sacc / sw;
+      // Gewichteter Mittelwert (1/acc²) über Liste von Punkten
+      function weightedMean(points){
+        let sw=0, slat=0, slon=0, sacc=0;
+        points.forEach(p => { const w = 1 / Math.max(1, p.acc * p.acc); sw+=w; slat+=w*p.lat; slon+=w*p.lon; sacc+=w*p.acc; });
+        return { lat: slat/sw, lon: slon/sw, accMean: sacc/sw, n: points.length };
       }
 
-      // Fix 1: gewichtetes Mittel aus n Messungen (nur ≤ minAccLimit)
-      async function refine(n = 10, minAccLimit = 100, onProgress = () => {}, isCancelled = () => false) {
+      // Laufender (gewichteter) Mittelwert der Accuracy (Hilfsfunktion)
+      function runningAccMean(points){
+        if (!points.length) return undefined;
+        return weightedMean(points).accMean;
+      }
+
+      // Fix 1: n Messungen, ABER nur ≤ minAccLimit (minAccLimit aus Feld; unter 50 → auf 50 korrigiert)
+      async function refineFix1(n = 10, minAccLimit = 100, onProgress = () => {}, isCancelled = () => false) {
         const pts = [];
         for (let i = 0; i < n; i++) {
           if (isCancelled()) throw new Error("abgebrochen");
           try {
             const { coords: c } = await getPos();
             if (isCancelled()) throw new Error("abgebrochen");
-
-            // Nur Messungen berücksichtigen, die die *Mindestgenauigkeit* einhalten
-            if (isFinite(c.latitude) && isFinite(c.longitude) && isFinite(c.accuracy) && c.accuracy <= minAccLimit) {
-              pts.push({ lat: c.latitude, lon: c.longitude, acc: c.accuracy });
+            if (isFinite(c.latitude) && isFinite(c.longitude) && isFinite(c.accuracy)) {
+              if (c.accuracy <= minAccLimit) {
+                pts.push({ lat: c.latitude, lon: c.longitude, acc: c.accuracy });
+              }
+              onProgress(i + 1, n, c.accuracy, runningAccMean(pts));
             }
-            onProgress(i + 1, n, c.accuracy, runningAccMean(pts));
           } catch (_) {}
           await sleep(400);
         }
         if (pts.length === 0) throw new Error(`Keine Messungen ≤ ${minAccLimit} m erhalten.`);
-
-        let sw=0, slat=0, slon=0, sacc=0;
-        pts.forEach(p => { const w = 1 / Math.max(1, p.acc * p.acc); sw+=w; slat+=w*p.lat; slon+=w*p.lon; sacc+=w*p.acc; });
-        return { lat: slat/sw, lon: slon/sw, accMean: sacc/sw, samples: pts.length };
+        return weightedMean(pts); // {lat, lon, accMean, n}
       }
 
-      // Fix 2: weiter messen, bis *minGood* Messungen ≤ targetAcc gesammelt sind; alle Messungen müssen ≤ minAccLimit sein
-      async function refineUntilMinGood(targetAcc = 2, minGood = 3, minAccLimit = 100, onProgress = () => {}, isCancelled = () => false) {
-        const pts = [];   // alle akzeptierten Messungen (≤ minAccLimit)
-        const good = [];  // „gute“ Messungen (≤ targetAcc)
+      // Fix 2: sammelt GENAU die „guten“ Messungen (acc ≤ targetAcc), bis minGood (hier 10) erreicht; mittelt NUR über diese guten
+      async function refineFix2Good(targetAcc = 2, minGood = 10, onProgress = () => {}, isCancelled = () => false) {
+        const good = []; // nur gute Messungen
+        let totalCount = 0; // nur für Statuszwecke
         while (good.length < minGood) {
           if (isCancelled()) throw new Error("abgebrochen");
           try {
             const { coords: c } = await getPos();
             if (isCancelled()) throw new Error("abgebrochen");
-
             if (isFinite(c.latitude) && isFinite(c.longitude) && isFinite(c.accuracy)) {
-              // Nur übernehmen, wenn ≤ Mindestgenauigkeit
-              if (c.accuracy <= minAccLimit) {
-                const sample = { lat: c.latitude, lon: c.longitude, acc: c.accuracy };
-                pts.push(sample);
-                if (c.accuracy <= targetAcc) good.push(sample);
-                onProgress(pts.length, null, c.accuracy, runningAccMean(pts), good.length);
-              } else {
-                // Fortschritt trotzdem anzeigen (als Info), aber nicht übernehmen
-                onProgress(pts.length, null, c.accuracy, runningAccMean(pts), good.length);
+              totalCount++;
+              if (c.accuracy <= targetAcc) {
+                good.push({ lat: c.latitude, lon: c.longitude, acc: c.accuracy });
               }
+              // „berechnet“ = nur über die bisher GUTEN
+              const accMeanGood = good.length ? weightedMean(good).accMean : undefined;
+              onProgress(totalCount, null, c.accuracy, accMeanGood, good.length);
             }
           } catch (_) {}
           await sleep(400);
         }
-
-        if (pts.length === 0) throw new Error(`Keine Messungen ≤ ${minAccLimit} m erhalten.`);
-
-        // Gewichtet über *alle* akzeptierten Messungen (≤ minAccLimit) mitteln
-        let sw=0, slat=0, slon=0, sacc=0;
-        pts.forEach(p => { const w = 1 / Math.max(1, p.acc * p.acc); sw+=w; slat+=w*p.lat; slon+=w*p.lon; sacc+=w*p.acc; });
-        return { lat: slat/sw, lon: slon/sw, samples: pts.length, accMean: sacc/sw, good: good.length };
+        // Endresultat NUR über die 10 guten
+        return weightedMean(good); // {lat, lon, accMean, n: good.length}
       }
 
       /* =================== Abbruch-Handling =================== */
@@ -239,74 +235,82 @@
       const accTargetI  = document.getElementById("accTarget");
       const minAccI     = document.getElementById("minAccInput");
 
-      // Fix Position 1: n Messungen (≤ Mindestgenauigkeit), mitteln, an AR.js übertragen, festsetzen
+      // Fix Position 1: Messungen ≤ Mindestgenauigkeit (mind. 50), mitteln, an AR.js übertragen, festsetzen
       btnFix1.addEventListener("click", async () => {
         cancelActive();
         const myId = beginOp();
 
         const n = Math.min(50, Math.max(3, parseInt(sampI.value || "12", 10)));
-        // Mindestgenauigkeit für Fix 1 aus Feld (keine Untergrenze erzwungen)
-        const minAccLimit = Math.max(1, parseInt(minAccI.value || "100", 10));
-
-        stat.textContent = `Fix1: messe… (0/${n}) (≤ ${minAccLimit} m)`;
+        // Mindestgenauigkeit für Fix 1: <50 → auf 50 korrigieren (und anzeigen)
+        let minAccLimit = Math.max(1, parseInt(minAccI.value || "100", 10));
+        if (minAccLimit < 50) {
+          minAccLimit = 50;
+          minAccI.value = 50;
+          stat.textContent = "Fix1: Mindestgenauigkeit < 50 nicht erlaubt, auf 50 gesetzt.";
+        } else {
+          stat.textContent = `Fix1: messe… (0/${n}) (≤ ${minAccLimit} m)`;
+        }
 
         try {
-          const best = await refine(
+          const best = await refineFix1(
             n,
             minAccLimit,
             (i, total, accNow, accMean) => {
               if (isCancelled(myId)) throw new Error("abgebrochen");
-              stat.textContent = `Fix1: (${i}/${total}) | aktuell: ${Math.round(accNow||0)} m | berechnet: ${accMean ? accMean.toFixed(1) : "–"} m (≤ ${minAccLimit} m)`;
+              stat.textContent =
+                `Fix1: (${i}/${total}) | aktuell: ${Math.round(accNow||0)} m | berechnet: ${accMean ? accMean.toFixed(1) : "–"} m (≤ ${minAccLimit} m)`;
             },
             () => isCancelled(myId)
           );
           if (isCancelled(myId)) throw new Error("abgebrochen");
 
           await setFixedPosition(best.lat, best.lon, best.accMean);
-          stat.textContent = `Fix1 fest: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)} | Acc ${best.accMean.toFixed(1)} m (n=${best.samples})`;
+          stat.textContent =
+            `Fix1 fest: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)} | Acc ${best.accMean.toFixed(1)} m (n=${best.n})`;
         } catch (e) {
           if (e?.message !== "abgebrochen") stat.textContent = "Fehler: " + (e?.message || e);
           else stat.textContent = "Abgebrochen.";
         }
       });
 
-      // Fix Position 2: bis mind. 3 gute Messungen (≤ Ziel), alle Messungen müssen ≤ Mindestgenauigkeit sein
+      // Fix Position 2: 10 gute Messungen (≤ Zielgenauigkeit), nur darüber mitteln
       btnFix2.addEventListener("click", async () => {
         cancelActive();
         const myId = beginOp();
 
-        const targetAcc   = Math.max(1, parseInt(accTargetI.value || "2", 10));   // „gut“-Schwelle
-        const minAccLimit = Math.max(1, parseInt(minAccI.value || "100", 10));    // harte Obergrenze
-        const minGood     = 3;
+        const targetAcc = Math.max(1, parseInt(accTargetI.value || "2", 10));
+        const minGood   = 10;
 
-        stat.textContent = `Fix2: Ziel ${targetAcc} m, mind. ${minGood} gute Messungen, nur ≤ ${minAccLimit} m werden übernommen…`;
+        stat.textContent = `Fix2: Ziel ${targetAcc} m – sammle ${minGood} gute Messungen…`;
 
         try {
-          const best = await refineUntilMinGood(
+          const best = await refineFix2Good(
             targetAcc,
             minGood,
-            minAccLimit,
-            (count, _t, accNow, accMean, goodCount) => {
+            (count, _t, accNow, accMeanGood, goodCount) => {
               if (isCancelled(myId)) throw new Error("abgebrochen");
-              stat.textContent = `Fix2: Messung ${count} | aktuell: ${Math.round(accNow||0)} m | berechnet: ${accMean ? accMean.toFixed(1) : "–"} m | gute: ${goodCount}/${minGood} (≤ ${minAccLimit} m)`;
+              // „berechnet“ = nur aus den bisher guten Messungen
+              const meanTxt = (accMeanGood != null) ? accMeanGood.toFixed(1) : "–";
+              stat.textContent =
+                `Fix2: Messung ${count} | aktuell: ${Math.round(accNow||0)} m | berechnet: ${meanTxt} m | gute: ${goodCount}/${minGood}`;
             },
             () => isCancelled(myId)
           );
           if (isCancelled(myId)) throw new Error("abgebrochen");
 
           await setFixedPosition(best.lat, best.lon, best.accMean);
-          stat.textContent = `Fix2 fest: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)} | Acc ${best.accMean.toFixed(1)} m (n=${best.samples}, gute=${best.good})`;
+          stat.textContent =
+            `Fix2 fest: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)} | Acc ${best.accMean.toFixed(1)} m (gute n=${best.n})`;
         } catch (e) {
           if (e?.message !== "abgebrochen") stat.textContent = "Fehler: " + (e?.message || e);
           else stat.textContent = "Abgebrochen.";
         }
       });
 
-      // Auto Position: Simulation aus, Mindestgenauigkeit direkt setzen, echte GPS-Updates
+      // Auto Position: Simulation aus, Mindestgenauigkeit (min 50) direkt setzen, echte GPS-Updates
       btnAuto.addEventListener("click", async () => {
         cancelActive();
 
-        // Für AR.js gilt: sinnvoll erst ab 50 m – dort clampen, Anzeige aktualisieren.
         let minAcc = Math.max(1, parseInt(minAccI.value || "100", 10));
         if (minAcc < 50) {
           minAcc = 50;
