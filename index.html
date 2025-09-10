@@ -47,15 +47,14 @@
             </a-assets>
 
                 <a-entity
-                    look-at="[gps-camera]"
+               
                     gltf-model="#animated-asset"
                     scale="1.0 1.0 1.0"
                     gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
                 ></a-entity>
-
           <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
 
-<!--  scale="0.013127487812072904 0.013127487812072904 0.013127487812072904" 
+<!--  scale="0.013127487812072904 0.013127487812072904 0.013127487812072904 look-at="[gps-camera]" " 
                     
  
 
@@ -68,7 +67,7 @@
         </a-scene>
 
           <div id="info-box"> 
-              Version: 1.0
+              Version: 1.1
           </div>
         
     </body>
