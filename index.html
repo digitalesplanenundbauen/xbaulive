@@ -49,6 +49,57 @@
       <a-camera gps-camera rotation-reader></a-camera>
     </a-scene>
 
+<!-- ================= Start-Fenster Overlay ================= -->
+<div id="start-overlay">
+  <div id="start-box">
+    <h2>xBauViewer V 1.9</h2>
+    <p>Hast du freie Sicht zum Himmel?</p>
+    <button id="startBtn">Ja</button>
+    <p class="info">Auch bei bedecktem Wetter können die Ergebnisse beeinträchtigt werden.</p>
+  </div>
+</div>
+
+<style>
+  #start-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  #start-box {
+    background: #fff;
+    padding: 20px 30px;
+    border-radius: 12px;
+    text-align: center;
+    font-family: sans-serif;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  #start-box h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+  }
+  #start-box button {
+    margin-top: 10px;
+    padding: 8px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  #start-box .info {
+    font-size: 12px;
+    color: #444;
+    margin-top: 15px;
+  }
+</style>
+
+<script>
+  // Startfenster-Logik
+  document.getElementById("startBtn").addEventListener("click", () => {
+    document.getElementById("start-overlay").style.display = "none";
+  });
+</script>
+    
     <!-- ================= UI: Infofenster ================= -->
     <div id="info-box">
       <div>Version: 1.8</div>
