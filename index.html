@@ -16,12 +16,12 @@
         <style>
           /* Infofenster unten */
           #info-box {
-            position: fixed;       /* fixiert am Bildschirm, nicht in der AR-Szene */
-            bottom: 0;             /* am unteren Rand */
+            position: fixed;
+            bottom: 0;
             left: 0;
-            width: 100%;           /* volle Breite */
-            background: rgba(221,221,221,0.7); /* hellgrau mit Transparenz */
-            color: #000;                       /* schwarze Schrift */
+            width: 100%;
+            background: rgba(221,221,221,0.7);
+            color: #000;
             font-family: sans-serif;
             font-size: 14px;
             padding: 10px;
@@ -43,17 +43,14 @@
             arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
         >
             <a-assets>
-                <a-asset-item
-                    id="animated-asset"
-                    src="assets/asset.glb"
-                ></a-asset-item>
+                <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
             </a-assets>
 
             <a-entity
                 gltf-model="#animated-asset"
                 scale="1.0 1.0 1.0"
-                gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
-            ></a-entity>
+                gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;">
+            </a-entity>
 
             <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
 
@@ -67,12 +64,14 @@
         </a-scene>
 
         <div id="info-box">
-          <div>Version: 1.2</div>
+          <div>Version: 1.3</div>
           <div id="coords">AR.js: Lat – | Lon – | Acc – m</div>
           <div class="row" style="margin-top:6px;">
             <label for="samples">Samples:</label>
             <input id="samples" type="number" min="3" max="50" step="1" value="12" />
             <button id="btnRefine">Genauigkeit verbessern</button>
+            <!-- NEU: Auto-Mode wieder aktivieren -->
+            <button id="btnAuto">Auto Position</button>
             <span id="status"></span>
           </div>
         </div>
@@ -102,20 +101,14 @@
               try {
                 const { coords: c } = await getPos();
                 if (isFinite(c.latitude) && isFinite(c.longitude) && isFinite(c.accuracy)) {
-                  // Messungen mit sehr schlechter Genauigkeit ignorieren (Schwellwert anpassbar)
                   if (c.accuracy <= 100) {
                     pts.push({ lat: c.latitude, lon: c.longitude, acc: c.accuracy });
                   }
                 }
-              } catch (_) {
-                // Messfehler ignorieren, nächste Runde
-              }
-              await sleep(400); // kleine Pause zwischen Messungen
+              } catch (_) {}
+              await sleep(400);
             }
-            if (pts.length === 0) {
-              throw new Error('Keine gültigen GPS-Messungen erhalten.');
-            }
-            // Gewichtete Mittelung (Gewicht = 1/acc^2)
+            if (pts.length === 0) throw new Error('Keine gültigen GPS-Messungen erhalten.');
             let sw = 0, slat = 0, slon = 0;
             pts.forEach(p => {
               const w = 1 / Math.max(1, p.acc * p.acc);
@@ -124,25 +117,45 @@
             return { lat: slat / sw, lon: slon / sw };
           }
 
-          // --- Button-Integration: Ergebnis an AR.js schicken ---
-          const btn   = document.getElementById('btnRefine');
-          const stat  = document.getElementById('status');
-          const sampI = document.getElementById('samples');
-          let originSet = false;
+          // --- Buttons & Lock/Unlock-Logik ---
+          const btnRefine = document.getElementById('btnRefine');
+          const btnAuto   = document.getElementById('btnAuto');
+          const stat      = document.getElementById('status');
+          const sampI     = document.getElementById('samples');
 
-          btn.addEventListener('click', async () => {
+          let originSet = false;
+          let locked = false; // merkt, ob wir die Position „festgesetzt“ haben
+
+          function getGpsCameraComponent(){
+            const camEl = document.querySelector('[gps-camera]');
+            return camEl?.components?.['gps-camera'] || null;
+          }
+
+          // Auto-Mode wieder aktivieren
+          btnAuto.addEventListener('click', () => {
+            const gpsCam = getGpsCameraComponent();
+            if (gpsCam) {
+              gpsCam.play();   // Komponenten-Updates wieder erlauben
+              locked = false;
+              stat.textContent = 'Auto-Position aktiv';
+            } else {
+              stat.textContent = 'gps-camera nicht bereit';
+            }
+          });
+
+          // Genauigkeit verbessern -> Position setzen -> Auto-Updates pausieren
+          btnRefine.addEventListener('click', async () => {
             if (!navigator.geolocation) {
               stat.textContent = 'Geolocation nicht verfügbar.';
               return;
             }
-            btn.disabled = true;
+            btnRefine.disabled = true;
             const n = Math.min(50, Math.max(3, parseInt(sampI.value || '12', 10)));
             stat.textContent = `messe… (0/${n})`;
 
-            // Fortschritt grob anzeigen
+            // Fortschritt anzeigen (leichtgewichtig)
             let count = 0;
             const origGetPos = getPos;
-            // (Optional) schnelle Fortschrittsanzeige – hier simpel via Interceptor:
             getPos = async function(){
               const r = await origGetPos();
               count++; stat.textContent = `messe… (${count}/${n})`;
@@ -151,21 +164,29 @@
 
             try {
               const best = await refine(n);
-              stat.textContent = `Resultat: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)}`;
+              stat.textContent = `Fix gesetzt: Lat ${best.lat.toFixed(6)} | Lon ${best.lon.toFixed(6)}`;
 
-              // AR.js so informieren, als käme diese Position vom System
               const detail = { position: { latitude: best.lat, longitude: best.lon, accuracy: 10 } };
+
+              // Erst Ursprung/Update an AR.js schicken …
               if (!originSet) {
                 window.dispatchEvent(new CustomEvent('gps-camera-origin-set', { detail }));
                 originSet = true;
               }
               window.dispatchEvent(new CustomEvent('gps-camera-update-position', { detail }));
+
+              // … dann die automatische Kamera-Aktualisierung PAUSIEREN (Position „festsetzen“)
+              const gpsCam = getGpsCameraComponent();
+              if (gpsCam) {
+                gpsCam.pause();   // stoppt watchPosition-Updates im Component
+                locked = true;
+                stat.textContent += ' | (festgesetzt)';
+              }
             } catch (e) {
               stat.textContent = 'Fehler: ' + (e?.message || e);
             } finally {
-              // Interceptor zurücksetzen
               getPos = origGetPos;
-              btn.disabled = false;
+              btnRefine.disabled = false;
             }
           });
         </script>
