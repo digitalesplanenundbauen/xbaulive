@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+      <!-- A-Frame itself -->
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+
+<!-- Pure three.js code that the A-Frame components use for location-based AR -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js'></script>
+
+<!-- AR.js A-Frame components -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js'></script>
+
+    <style>
+      /* Infofenster unten */
+      #info-box {
+        position: fixed;       /* fixiert am Bildschirm, nicht in der AR-Szene */
+        bottom: 0;             /* am unteren Rand */
+        left: 0;
+        width: 100%;           /* volle Breite */
+        background: rgba(221,221,221,0.7); /* hellgrau mit Transparenz */
+        color: #000;                       /* schwarze Schrift */
+        font-family: sans-serif;
+        font-size: 14px;
+        padding: 10px;
+        box-sizing: border-box;
+        text-align: left; 
+      }
+    </style>
+        
+    </head>
+
+    <body style="margin: 0; overflow: hidden;">
+        <a-scene
+            renderer="logarithmicDepthBuffer: true;"
+            embedded
+            loading-screen="enabled: false;"
+            arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
+        >
+            <a-assets>
+                <a-asset-item
+                    id="animated-asset"
+                    src="assets/asset.glb"
+                ></a-asset-item>
+            </a-assets>
+
+                <a-entity
+               
+                    gltf-model="#animated-asset"
+                    scale="1.0 1.0 1.0"
+                    gps-entity-place="latitude: 47.8676806; longitude: 12.1091045;"
+                ></a-entity>
+        <!--  <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera> -->
+
+                    
+ 
+
+     <a-camera
+        id="cam"
+       simulateLatitude: 47.8668463; simulateLongitude: 12.1090135;"
+        rotation-reader>
+      </a-camera>
+
+        </a-scene>
+
+          <div id="info-box"> 
+              Version: 1.1
+          </div>
+        
+    </body>
+</html>
