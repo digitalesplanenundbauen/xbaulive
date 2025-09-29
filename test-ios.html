@@ -8,100 +8,164 @@
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
 
     <!-- AR.js (location-based) -->
-    <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
-    <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 
     <style>
-      /* Infofenster unten */
-      #info-box {
-        position: fixed;       /* fixiert am Bildschirm, nicht in der AR-Szene */
-        bottom: 0;             /* am unteren Rand */
-        left: 0;
-        width: 100%;           /* volle Breite */
-        background: rgba(221,221,221,0.7); /* hellgrau mit Transparenz */
-        color: #000;                       /* schwarze Schrift */
-        font-family: sans-serif;
-        font-size: 14px;
-        padding: 10px;
-        box-sizing: border-box;
-        text-align: left;
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
+      /* Start-Overlay */
+      #start-overlay{
+        position:fixed; inset:0;
+        display:flex; align-items:center; justify-content:center;
+        flex-direction:column; gap:12px;
+        background: #111; color:#fff; font-family:sans-serif; z-index: 9999;
       }
+      #start-overlay button{
+        font-size:16px; padding:10px 16px; border:0; border-radius:10px; cursor:pointer;
+      }
+      /* Infofenster unten (Debug) */
+      #info-box {
+        position: fixed;
+        bottom: 0; left: 0; width: 100%;
+        background: rgba(221,221,221,0.85);
+        color: #000; font-family: monospace; font-size: 12px;
+        padding: 8px 10px; box-sizing: border-box; text-align: left;
+        max-height: 30vh; overflow: auto; z-index: 9998;
+      }
+      .hint {opacity: 0.8; font-size: 12px;}
     </style>
   </head>
 
-  <body style="margin: 0; overflow: hidden;">
+  <body>
+    <!-- Start-Overlay (erzwingt User-Geste auf iOS) -->
+    <div id="start-overlay">
+      <div style="max-width:600px;text-align:center;padding:0 16px;">
+        <h3>xBauViewer – AR Start</h3>
+        <p class="hint">
+          Bitte tippen, um Kamera, Standort und Bewegungssensor zu aktivieren (iOS erfordert eine Nutzerinteraktion).
+          Stelle sicher: HTTPS, präziser Standort & „Bewegung & Ausrichtung“ sind erlaubt.
+        </p>
+      </div>
+      <button id="start-btn">Start</button>
+    </div>
+
     <a-scene
-      renderer="logarithmicDepthBuffer: true;"
+      renderer="logarithmicDepthBuffer: true; alpha: true;"
       embedded
       loading-screen="enabled: false;"
-      arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
+      vr-mode-ui="enabled: false"
+      arjs="sourceType: webcam; facingMode: environment; gpsMinDistance: 2; debugUIEnabled: false;"
     >
       <a-assets>
-        <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        <!-- CORS-freundlich laden -->
+        <a-asset-item id="animated-asset" crossorigin="anonymous" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
       </a-assets>
 
       <a-entity
+        id="model"
         gltf-model="#animated-asset"
         scale="0.8 0.8 0.8"
         gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
       </a-entity>
 
-      <!-- Kamera mit ID und northOffset (wird per Script angepasst) -->
+      <!-- Kamera mit northOffset (Script passt dynamisch an) -->
       <a-camera id="cam" gps-camera="minAccuracy: 50; northOffset: 0" rotation-reader></a-camera>
 
-      <!-- Optional, aber für iOS Safari sehr hilfreich:
-           Fragt die DeviceOrientation-Permission sauber ab -->
+      <!-- Optional: AR.js UI-Komponente für iOS-Orientation-Permission -->
       <a-entity device-orientation-permission-ui="enabled: true"></a-entity>
-
-      <!--
-      Alternative: Simulation statt Live-GPS
-      <a-camera
-        gps-camera="simulateLatitude: 47.86819206; simulateLongitude: 12.11020971;"
-        rotation-reader>
-      </a-camera>
-      -->
     </a-scene>
 
-    <div id="info-box">Version: 1.6</div>
+    <div id="info-box">Log startet…<br>Version: 1.7</div>
 
-    <!-- iOS 90°-Yaw-Workaround: passt northOffset dynamisch an -->
     <script>
-      (function () {
-        const isIOS =
-          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // --- Mini-Logger in die Info-Box ---
+      const logBox = document.getElementById('info-box');
+      function log(msg){ logBox.innerHTML += '<br>' + (typeof msg === 'string' ? msg : JSON.stringify(msg)); }
 
-        if (!isIOS) return;
+      // --- iOS-Erkennung ---
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+      // --- iOS 90°-Yaw-Fix per northOffset ---
+      function getOrientationAngle(){
+        if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+        return (typeof window.orientation === 'number') ? window.orientation : 0;
+      }
+      function applyNorthOffsetForIOS(){
         const cam = document.getElementById('cam');
         if (!cam) return;
+        const angle = getOrientationAngle();
+        const needsLandscapeFix = Math.abs(angle) === 90;
+        const offset = needsLandscapeFix ? 90 : 0; // falls falsch herum: -90 probieren
+        const current = cam.getAttribute('gps-camera') || {};
+        cam.setAttribute('gps-camera', Object.assign({}, current, { northOffset: offset }));
+        log('northOffset gesetzt auf: ' + offset + ' (angle=' + angle + ')');
+      }
 
-        function getOrientationAngle() {
-          // screen.orientation.angle ist moderner; window.orientation als Fallback
-          if (screen.orientation && typeof screen.orientation.angle === 'number') {
-            return screen.orientation.angle;
+      // --- Permissions per Button abfragen ---
+      async function requestMotionPermissionIfNeeded(){
+        try{
+          if (isIOS && typeof DeviceOrientationEvent !== 'undefined' &&
+              typeof DeviceOrientationEvent.requestPermission === 'function'){
+            const res = await DeviceOrientationEvent.requestPermission();
+            log('DeviceOrientation permission: ' + res);
           }
-          return (typeof window.orientation === 'number') ? window.orientation : 0;
+        }catch(e){ log('DeviceOrientation error: ' + e); }
+      }
+
+      async function requestGeoOnce(){
+        return new Promise((resolve) => {
+          if (!('geolocation' in navigator)) { log('Geolocation nicht verfügbar'); resolve(false); return; }
+          navigator.geolocation.getCurrentPosition(
+            (pos)=>{ log('Geolocation OK: ' + pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6) + ' (acc≈' + pos.coords.accuracy + 'm)'); resolve(true); },
+            (err)=>{ log('Geolocation Fehler: ' + err.message); resolve(false); },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+        });
+      }
+
+      async function requestCameraPrewarm(){
+        // A-Frame/AR.js kümmert sich eigentlich um getUserMedia.
+        // Auf manchen iOS-Versionen hilft ein „Prewarm“ unter User-Geste.
+        try{
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { log('getUserMedia nicht verfügbar'); return; }
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+          // Sofort wieder stoppen – Zweck ist nur die Permission.
+          stream.getTracks().forEach(t=>t.stop());
+          log('Kamera-Prewarm OK');
+        }catch(e){ log('Kamera-Prewarm Fehler: ' + e.message); }
+      }
+
+      // --- Start-Klick: alles nacheinander anwerfen ---
+      document.getElementById('start-btn').addEventListener('click', async ()=>{
+        log('Start gedrückt');
+        await requestMotionPermissionIfNeeded();
+        await requestGeoOnce();
+        await requestCameraPrewarm();
+        if (isIOS) {
+          applyNorthOffsetForIOS();
+          window.addEventListener('orientationchange', applyNorthOffsetForIOS);
         }
+        // Overlay ausblenden
+        document.getElementById('start-overlay').style.display = 'none';
+      });
 
-        function applyNorthOffsetForIOS() {
-          const angle = getOrientationAngle();
+      // --- A-Frame / AR.js Event-Logs ---
+      window.addEventListener('camera-init', (ev)=> log('camera-init: OK'));
+      window.addEventListener('camera-error', (ev)=> log('camera-error: ' + (ev && ev.detail && ev.detail.error ? ev.detail.error.message : 'unbekannt')));
 
-          // In Landscape (±90) liefert iOS häufig einen konstanten 90°-Versatz
-          // Falls dein Setup „in die falsche Richtung“ korrigiert: setze offset auf -90 statt 90.
-          const needsLandscapeFix = Math.abs(angle) === 90;
-          const offset = needsLandscapeFix ? 90 : 0;
+      const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('loaded', ()=> log('Scene loaded'));
+      const camEl = document.getElementById('cam');
 
-          // vorhandene Attribute holen, nur northOffset überschreiben
-          const current = cam.getAttribute('gps-camera') || {};
-          cam.setAttribute('gps-camera', Object.assign({}, current, { northOffset: offset }));
-        }
+      camEl.addEventListener('gps-camera-update-position', (e)=>{
+        const c = e.detail.position || {};
+        log('gps-camera position: ' + JSON.stringify(c));
+      });
 
-        // Initial anwenden …
-        applyNorthOffsetForIOS();
-        // … und bei späterem Drehen des Geräts erneut
-        window.addEventListener('orientationchange', applyNorthOffsetForIOS);
-      })();
+      const modelEl = document.getElementById('model');
+      modelEl.addEventListener('model-error', (e)=> log('model-error: ' + JSON.stringify(e.detail || {})));
+      modelEl.addEventListener('model-loaded', ()=> log('model-loaded'));
     </script>
   </body>
 </html>
