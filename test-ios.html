@@ -43,7 +43,7 @@
                 <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
             </a-assets>
 <!--device-orientation-permission-ui="enabled: true"-->
-			<a-entity id="world-yaw" rotation="0 90 0">
+			<a-entity id="world-yaw" rotation="0 0 0">
     <a-entity
         gltf-model="#animated-asset"
 		
@@ -61,10 +61,20 @@
             -->
         </a-scene>
 
-
+<script>
+  (function () {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isIOS) return;
+    const world = document.getElementById('world-yaw');
+    if (!world) return;
+    // Falls es „in die andere Richtung“ ist, -90 verwenden.
+    world.setAttribute('rotation', '0 90 0');
+  })();
+</script>
 
 			<div id="info-box"> 
-              Version: 2.9
+              Version: 3.0
           </div>
         
     </body>
