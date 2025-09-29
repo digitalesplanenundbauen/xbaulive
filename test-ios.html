@@ -1,17 +1,15 @@
 <!doctype html>
 <html>
-    <head>
-        <meta charset="utf-8" />
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-      <!-- A-Frame itself -->
-<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
 
-<!-- Pure three.js code that the A-Frame components use for location-based AR -->
-<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js'></script>
-
-<!-- AR.js A-Frame components -->
-<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js'></script>
+    <!-- AR.js (location-based) -->
+    <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+    <script type="text/javascript" src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 
     <style>
       /* Infofenster unten */
@@ -26,42 +24,84 @@
         font-size: 14px;
         padding: 10px;
         box-sizing: border-box;
-        text-align: left; 
+        text-align: left;
       }
     </style>
-        
-    </head>
+  </head>
 
-    <body style="margin: 0; overflow: hidden;">
-        <a-scene
-            renderer="logarithmicDepthBuffer: true;"
-            embedded
-            loading-screen="enabled: false;"
-            arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
-        >
-            <a-assets>
-                <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-            </a-assets>
+  <body style="margin: 0; overflow: hidden;">
+    <a-scene
+      renderer="logarithmicDepthBuffer: true;"
+      embedded
+      loading-screen="enabled: false;"
+      arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
+    >
+      <a-assets>
+        <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+      </a-assets>
 
-    <a-entity
+      <a-entity
         gltf-model="#animated-asset"
         scale="0.8 0.8 0.8"
         gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
       </a-entity>
 
-    <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
+      <!-- Kamera mit ID und northOffset (wird per Script angepasst) -->
+      <a-camera id="cam" gps-camera="minAccuracy: 50; northOffset: 0" rotation-reader></a-camera>
 
-    <!--        
-    <a-camera
-        gps-camera="simulateLatitude:  47.86819206; simulateLongitude: 12.11020971;"
+      <!-- Optional, aber für iOS Safari sehr hilfreich:
+           Fragt die DeviceOrientation-Permission sauber ab -->
+      <a-entity device-orientation-permission-ui="enabled: true"></a-entity>
+
+      <!--
+      Alternative: Simulation statt Live-GPS
+      <a-camera
+        gps-camera="simulateLatitude: 47.86819206; simulateLongitude: 12.11020971;"
         rotation-reader>
       </a-camera>
-            -->
-        </a-scene>
+      -->
+    </a-scene>
 
-          <div id="info-box"> 
-              Version: 1.5
-          </div>
-        
-    </body>
+    <div id="info-box">Version: 1.6</div>
+
+    <!-- iOS 90°-Yaw-Workaround: passt northOffset dynamisch an -->
+    <script>
+      (function () {
+        const isIOS =
+          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (!isIOS) return;
+
+        const cam = document.getElementById('cam');
+        if (!cam) return;
+
+        function getOrientationAngle() {
+          // screen.orientation.angle ist moderner; window.orientation als Fallback
+          if (screen.orientation && typeof screen.orientation.angle === 'number') {
+            return screen.orientation.angle;
+          }
+          return (typeof window.orientation === 'number') ? window.orientation : 0;
+        }
+
+        function applyNorthOffsetForIOS() {
+          const angle = getOrientationAngle();
+
+          // In Landscape (±90) liefert iOS häufig einen konstanten 90°-Versatz
+          // Falls dein Setup „in die falsche Richtung“ korrigiert: setze offset auf -90 statt 90.
+          const needsLandscapeFix = Math.abs(angle) === 90;
+          const offset = needsLandscapeFix ? 90 : 0;
+
+          // vorhandene Attribute holen, nur northOffset überschreiben
+          const current = cam.getAttribute('gps-camera') || {};
+          cam.setAttribute('gps-camera', Object.assign({}, current, { northOffset: offset }));
+        }
+
+        // Initial anwenden …
+        applyNorthOffsetForIOS();
+        // … und bei späterem Drehen des Geräts erneut
+        window.addEventListener('orientationchange', applyNorthOffsetForIOS);
+      })();
+    </script>
+  </body>
 </html>
