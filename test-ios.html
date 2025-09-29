@@ -60,8 +60,24 @@
             -->
         </a-scene>
 
-          <div id="info-box"> 
-              Version: 2.6
+
+
+		<script>
+  // Einfacher Kompass-Offset für iOS (oder generell)
+  document.querySelector('[gps-camera]').addEventListener('gps-camera-update-rotation', e => {
+    // Original Yaw (Heading in Grad)
+    const heading = e.detail.rotation.y;
+
+    // Offset hinzufügen (hier +90°; falls falsch herum: -90 probieren)
+    const corrected = heading + 90;
+
+    // Rotation an Kamera überschreiben
+    e.target.object3D.rotation.y = THREE.MathUtils.degToRad(corrected);
+  });
+</script>
+
+			<div id="info-box"> 
+              Version: 2.7
           </div>
         
     </body>
