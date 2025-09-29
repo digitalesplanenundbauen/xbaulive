@@ -43,14 +43,15 @@
                 <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
             </a-assets>
 <!--device-orientation-permission-ui="enabled: true"-->
+			<a-entity id="world-yaw" rotation="0 90 0">
     <a-entity
         gltf-model="#animated-asset"
 		
         scale="0.8 0.8 0.8"
         gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
       </a-entity>
-
-    <a-camera gps-camera="minAccuracy: 50" yaw-offset="deg: 90" rotation-reader></a-camera>
+</a-entity>
+    <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
 
     <!--        
     <a-camera
@@ -61,28 +62,9 @@
         </a-scene>
 
 
-<script>
-AFRAME.registerComponent('yaw-offset', {
-  schema: { deg: {type: 'number', default: 90} },
-  init() {
-    this._rad = THREE.MathUtils.degToRad(this.data.deg);
-    this._last = 0; // zuletzt angewandter Offset (Rad)
-  },
-  update(oldData) {
-    this._rad = THREE.MathUtils.degToRad(this.data.deg);
-  },
-  // läuft NACH dem normalen Rendern – überschreibt damit sicher rotation-reader
-  tock() {
-    const r = this.el.object3D.rotation;
-    const baseYaw = r.y - this._last;   // ursprünglicher Yaw ohne unseren Offset
-    r.y = baseYaw + this._rad;          // neuen Offset anwenden
-    this._last = this._rad;             // für die nächste Frame bereithalten
-  }
-});
-</script>
 
 			<div id="info-box"> 
-              Version: 2.8
+              Version: 2.9
           </div>
         
     </body>
