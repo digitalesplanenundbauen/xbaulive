@@ -44,19 +44,21 @@
             </a-assets>
 <!--device-orientation-permission-ui="enabled: true"-->
 <a-entity id="world-yaw" rotation="0 0 0">
-     <a-entity gps-entity-place="latitude: 47.866871150; longitude: 12.109124974;">
-		<!-- <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;"> -->
+		<a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
 		 	<a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 0">
 			</a-entity>
       </a-entity>
 </a-entity>
 
 <a-camera
-        gps-camera="simulateLatitude:  47.866880722; simulateLongitude: 12.109128178;"
-        rotation-reader>
+        gps-camera="simulateLatitude:  47.866871150; simulateLongitude: 12.109124974;"
+	    rotation-reader>
       </a-camera>
-    <!--        
-    <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
+			<!-- 
+			
+			gps-camera="simulateLatitude:  47.866880722; simulateLongitude: 12.109128178;"
+			
+    		<a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
             -->
         </a-scene>
 <!--
@@ -188,7 +190,7 @@
 </script>
 
 			<div id="info-box"> 
-              Version: 4.5
+              Version: 4.6
           </div>
         
     </body>
