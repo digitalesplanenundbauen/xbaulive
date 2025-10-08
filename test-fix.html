@@ -45,71 +45,18 @@
 <!--device-orientation-permission-ui="enabled: true"-->
 <a-entity id="world-yaw" rotation="0 0 0">
 		<a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-		 	<a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 0">
+		 	<a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10">
 			</a-entity>
       </a-entity>
 </a-entity>
 
 <a-camera
-        gps-camera="simulateLatitude:  47.866871150; simulateLongitude: 12.109124974;"
+        gps-camera="simulateLatitude:  47.866880722; simulateLongitude: 12.109128178;"
 	    rotation-reader>
       </a-camera>
-			<!-- 
-			
-			gps-camera="simulateLatitude:  47.866880722; simulateLongitude: 12.109128178;"
-			
-    		<a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
-            -->
+			<!-- <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera> -->
         </a-scene>
-<!--
-<script>
-  (function () {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (!isIOS) return;
-    const world = document.getElementById('world-yaw');
-    if (!world) return;
-    // Falls es „in die andere Richtung“ ist, -90 verwenden.
-    world.setAttribute('rotation', '0 90 0');
-  })();
-</script>
 
-		<script>
-  (function () {
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (!isIOS) return;
-
-    const world = document.getElementById('world-yaw');
-    if (!world) return;
-
-    function applyOrientationFix() {
-      // Prüfe aktuelle Bildschirmausrichtung
-      const angle =
-        (screen.orientation && typeof screen.orientation.angle === 'number')
-          ? screen.orientation.angle
-          : (typeof window.orientation === 'number'
-              ? window.orientation
-              : 0);
-
-      // Standard: keine Drehung
-      let yawFix = 0;
-
-      // Landscape-Modus erkannt → 90°-Korrektur
-      if (Math.abs(angle) === 90) yawFix = 90;
-
-      world.setAttribute('rotation', `0 ${yawFix} 0`);
-      console.log('Orientation:', angle, '→ world rotation:', yawFix);
-    }
-
-    // Einmal beim Laden anwenden …
-    applyOrientationFix();
-    // … und erneut, wenn das Gerät gedreht wird
-    window.addEventListener('orientationchange', applyOrientationFix);
-  })();
-</script>
-				-->
 <script>
   (function () {
     const isIOS =
@@ -190,7 +137,7 @@
 </script>
 
 			<div id="info-box"> 
-              Version: 4.6
+              Version: 4.7
           </div>
         
     </body>
