@@ -58,7 +58,7 @@
     <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera>
             -->
         </a-scene>
-
+<!--
 <script>
   (function () {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -70,9 +70,45 @@
     world.setAttribute('rotation', '0 90 0');
   })();
 </script>
+		-->
+		<script>
+  (function () {
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isIOS) return;
+
+    const world = document.getElementById('world-yaw');
+    if (!world) return;
+
+    function applyOrientationFix() {
+      // Prüfe aktuelle Bildschirmausrichtung
+      const angle =
+        (screen.orientation && typeof screen.orientation.angle === 'number')
+          ? screen.orientation.angle
+          : (typeof window.orientation === 'number'
+              ? window.orientation
+              : 0);
+
+      // Standard: keine Drehung
+      let yawFix = 0;
+
+      // Landscape-Modus erkannt → 90°-Korrektur
+      if (Math.abs(angle) === 90) yawFix = 90;
+
+      world.setAttribute('rotation', `0 ${yawFix} 0`);
+      console.log('Orientation:', angle, '→ world rotation:', yawFix);
+    }
+
+    // Einmal beim Laden anwenden …
+    applyOrientationFix();
+    // … und erneut, wenn das Gerät gedreht wird
+    window.addEventListener('orientationchange', applyOrientationFix);
+  })();
+</script>
 
 			<div id="info-box"> 
-              Version: 3.9
+              Version: 4.0
           </div>
         
     </body>
