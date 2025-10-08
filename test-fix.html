@@ -107,9 +107,87 @@
   })();
 </script>
 				-->
+<script>
+  (function () {
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isIOS) return;
+
+    const world = document.getElementById('world-yaw');
+    if (!world) return;
+
+    // 👉 Hier pro Orientierung den gewünschten Yaw-Offset (in Grad) eintragen.
+    //    Falls etwas „falsch herum“ ist, Vorzeichen tauschen.
+    const OFFSETS = {
+      'portrait-primary':   0,   // Gerät hochkant, Standardausrichtung (Top-Knopf oben)
+      'portrait-secondary': 180,   // Gerät hochkant, auf dem Kopf
+      'landscape-primary':  90,  // Gerät quer, „erste“ Landscape-Seite
+      'landscape-secondary':-90  // Gerät quer, andere Landscape-Seite
+    };
+
+    function getScreenAngle() {
+      if (screen.orientation && typeof screen.orientation.angle === 'number') {
+        return screen.orientation.angle; // 0, 90, 180, 270
+      }
+      if (typeof window.orientation === 'number') {
+        // iOS Safari: 0, 90, -90, 180
+        return window.orientation;
+      }
+      // Fallback: Portrait annehmen
+      return 0;
+    }
+
+    function normalizeAngle(a) {
+      // Normiere auf -180..180
+      a = ((a % 360) + 360) % 360;
+      if (a > 180) a -= 360;
+      return a;
+    }
+
+    function getOrientationType() {
+      // Wenn verfügbar, direkt nehmen (am präzisesten)
+      if (screen.orientation && screen.orientation.type) {
+        return screen.orientation.type; // z.B. 'portrait-primary'
+      }
+
+      // iOS: aus Winkel ableiten
+      const ang = normalizeAngle(getScreenAngle());
+      // Konvention:
+      //   0    -> portrait-primary
+      //   180  -> portrait-secondary
+      //   90   -> landscape-primary
+      //   -90  -> landscape-secondary
+      if (ang === 0)   return 'portrait-primary';
+      if (ang === 180 || ang === -180) return 'portrait-secondary';
+      if (ang === 90)  return 'landscape-primary';
+      if (ang === -90) return 'landscape-secondary';
+
+      // Fallback
+      return 'portrait-primary';
+    }
+
+    function applyOrientationFix() {
+      const type = getOrientationType();
+      const yawFix = OFFSETS[type] ?? 0;
+      world.setAttribute('rotation', `0 ${yawFix} 0`);
+      // optional: debug
+      // console.log('orientation:', type, '→ yawFix:', yawFix);
+    }
+
+    // Beim Start anwenden …
+    applyOrientationFix();
+    // … und bei Drehung erneut
+    window.addEventListener('orientationchange', applyOrientationFix);
+
+    // iOS 17+ feuert manchmal kein orientationchange bei kleinen Kippbewegungen:
+    // Als Backup reagiert zusätzlich auf Resize (hat kaum Overhead).
+    window.addEventListener('resize', applyOrientationFix);
+  })();
+</script>
 
 			<div id="info-box"> 
-              Version: 4.1
+              Version: 4.2
           </div>
         
     </body>
