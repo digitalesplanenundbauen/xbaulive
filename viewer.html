@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GLB – A-Frame Vollseite</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <!-- Orbit Controls (zum Drehen/Zoomen mit Maus/Touch; sehr klein) -->
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-orbit-controls-component@1.3.0/dist/aframe-orbit-controls-component.min.js"></script>
+
+  <style>
+    html, body { height:100%; margin:0; }
+    a-scene { width:100%; height:100%; } /* ganze Seite ausfüllen */
+  </style>
+</head>
+<body>
+  <a-scene renderer="color: #f3f3f3">
+    <a-assets>
+      <!-- Ersetze 'model.glb' durch deinen Dateinamen oder eine URL -->
+      <a-asset-item id="m" src="gameobjectohnekellerreduziert.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Licht (einfach & neutral) -->
+    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+    <a-entity light="type: directional; intensity: 0.9" position="1 2 1"></a-entity>
+
+    <!-- Dein Modell -->
+    <a-entity gltf-model="#m" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-entity>
+
+    <!-- Kamera mit Orbit-Steuerung -->
+    <a-entity id="cam"
+              position="0 2 6"
+              camera
+              orbit-controls="target: 0 1 0; minDistance: 1; maxDistance: 50; enableDamping: true">
+    </a-entity>
+  </a-scene>
+</body>
+</html>
