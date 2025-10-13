@@ -24,7 +24,11 @@
     footer{ position:sticky; bottom:0; z-index:10; background:#fff; border-top:1px solid var(--border); text-align:center }
     .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap }
     .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(16px,2.5vw,18px); padding:12px 22px; border:0; border-radius:var(--radius); cursor:pointer }
-    .footer-text{ font-size:clamp(14px,2.2vw,16px); color:var(--muted) }
+    .footer-text{ 
+      font-size:clamp(14px,2.2vw,16px); 
+      color:var(--muted); 
+      text-align:left; /* Linksbündig */
+    }
   </style>
   <!-- =====================
        A-Frame (3D Framework)
@@ -68,7 +72,7 @@
   <footer>
     <div class="footer-inner">
       <button class="live-btn" id="liveBtn">Live</button>
-      <span class="footer-text">Lass dir das Gebäude in der Realität darstellen.</span>
+      <span class="footer-text">Lass dir das Gebäude <br> in der Realität darstellen.</span>
     </div>
   </footer>
 
