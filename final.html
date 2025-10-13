@@ -1,18 +1,51 @@
+<!doctype html>
+<html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLB Viewer</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>html,body{margin:0;height:100%} model-viewer{width:100%;height:100vh;background:#f5f7fa}</style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GLB Viewer (A‑Frame · Orbit)</title>
+
+
+<!-- A‑Frame (Core) -->
+<script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+<!-- Orbit Controls-Komponente (leichtgewichtig) -->
+<script src="https://unpkg.com/aframe-orbit-controls-component@1.3.1/dist/aframe-orbit-controls-component.min.js"></script>
+
+
+<style>
+html, body { height: 100%; margin: 0; }
+a-scene { height: 100%; }
+</style>
 </head>
 <body>
-  <model-viewer src="assets/gameobjectohnekellerreduziert.glb"
-                camera-controls
-                touch-action="pan-y"
-                exposure="1"
-                shadow-intensity="0.8"
-                ar
-                autoplay>
-  </model-viewer>
+<a-scene renderer="antialias: true; physicallyCorrectLights: true" background="color: #f5f7fa">
+<a-assets>
+<a-asset-item id="m" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+</a-assets>
+
+
+<!-- schlichtes Licht -->
+<a-entity light="type: ambient; intensity: 0.7"></a-entity>
+<a-entity light="type: directional; intensity: 0.9" position="1 2 1"></a-entity>
+
+
+<!-- Modell -->
+<a-entity id="model" gltf-model="#m" position="0 0 0" shadow="cast: true; receive: true"></a-entity>
+
+
+<!-- Kamera mit Orbit (Drehen: Drag, Zoomen: Scroll/Pinch, Pannen: Shift+Drag) -->
+<a-entity position="0 1.6 6">
+<a-entity camera
+look-controls-enabled="false"
+wasd-controls-enabled="false"
+orbit-controls="
+target: #model;
+enableDamping: true;
+dampingFactor: 0.12;
+minDistance: 0.5;
+maxDistance: 200;
+"></a-entity>
+</a-entity>
+</a-scene>
 </body>
 </html>
