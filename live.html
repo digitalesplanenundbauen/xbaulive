@@ -32,10 +32,7 @@
       display:block; 
       touch-action:none; 
       background:transparent !important;
-      position: absolute;
-      inset: 0;
-      max-width: 100vw;
-      max-height: 100dvh;
+      /* entferne position/max-width/max-height */
     }
     footer{ 
       position:sticky; 
@@ -141,6 +138,18 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
+
+    // Workaround: Body-Styles nach AR.js überschreiben (Chrome-Fix)
+    function fixBodyStyles() {
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.documentElement.style.position = '';
+      document.documentElement.style.width = '';
+      document.documentElement.style.height = '';
+    }
+    window.addEventListener('arjs-video-loaded', fixBodyStyles);
+    window.addEventListener('resize', fixBodyStyles);
   </script>
 </body>
 </html>
