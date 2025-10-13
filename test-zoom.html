@@ -1,253 +1,230 @@
 <!doctype html>
 <html>
   <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-
-    <!-- A-Frame -->
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
 
     <!-- AR.js (Location-based) -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 
-    <!-- Orbit Controls für den Viewer-Modus -->
-    <script src="https://unpkg.com/aframe-orbit-controls-component@1.4.0/dist/aframe-orbit-controls-component.min.js"></script>
-
     <style>
-      /* Infofenster unten */
       #info-box {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background: rgba(221,221,221,0.7);
-        color: #000;
-        font-family: sans-serif;
-        font-size: 14px;
-        padding: 10px;
-        box-sizing: border-box;
-        text-align: left;
-        z-index: 10;
-      }
-
-      /* Zurück-Button im Viewer-Modus */
-      #back-btn {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        z-index: 20;
-        background: rgba(0,0,0,0.65);
-        color: #fff;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-family: sans-serif;
-        font-size: 14px;
-        display: none; /* nur im Viewer-Modus anzeigen */
-      }
-
-      /* Viewer-Szene überlagert die AR-Szene bei Bedarf */
-      #viewer-wrap {
-        position: fixed;
-        inset: 0;
-        display: none; /* erst sichtbar machen, wenn umgeschaltet */
-        z-index: 15;   /* über AR-Szene, unter dem Back-Button & Info-Box */
-        background: #f0f0f0;
+        position: fixed; bottom: 0; left: 0; width: 100%;
+        background: rgba(221,221,221,0.7); color:#000; font-family:sans-serif;
+        font-size:14px; padding:10px; box-sizing:border-box; text-align:left; z-index:10;
       }
     </style>
   </head>
 
-  <body style="margin: 0; overflow: hidden;">
-    <!-- ========== AR-SZENE (GPS) ========== -->
+  <body style="margin:0; overflow:hidden;">
     <a-scene
-      id="ar-scene"
-      renderer="logarithmicDepthBuffer: true;"
+      id="scene"
+      renderer="logarithmicDepthBuffer: true; alpha: true;"  <!-- alpha true: AR-Video sichtbar -->
       embedded
       loading-screen="enabled: false;"
       arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
     >
       <a-assets>
         <!-- AR-Modell -->
-        <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-        <!-- Viewer-Modell (ANDERES GLB) -->
+        <a-asset-item id="ar-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        <!-- Inspect-Modell (gleiches Objekt in anderer LOD/Variante) -->
         <a-asset-item id="inspect-asset" src="assets/gameobject.glb"></a-asset-item>
       </a-assets>
 
-      <!-- Welt-Drehung (iOS-Orientierungsfix greift hier) -->
       <a-entity id="world-yaw" rotation="0 0 0">
         <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-          <a-entity id="ar-model" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+          <!-- Manipulierbares Objekt -->
+          <a-entity id="ar-model"
+                    gltf-model="#ar-asset"
+                    position="-20 -4 -10"
+                    scale="0.8 0.8 0.8"
+                    touch-manipulator="inspectModel:#inspect-asset; arModel:#ar-asset">
+          </a-entity>
         </a-entity>
       </a-entity>
 
-      <!-- Simulierte GPS-Kamera (für echten Betrieb einfach die andere Zeile verwenden) -->
-      <a-camera gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
-      <!-- ECHT: <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera> -->
+      <!-- Simulierte GPS-Kamera (für echten Betrieb s. Kommentar) -->
+      <a-camera gps-camera="simulateLatitude:47.866880722; simulateLongitude:12.109128178;" rotation-reader></a-camera>
+      <!-- ECHT: <a-camera gps-camera="minAccuracy:50" rotation-reader></a-camera> -->
     </a-scene>
 
-    <!-- ========== VIEWER-SZENE (GESTEN/ORBIT) ========== -->
-    <div id="viewer-wrap">
-      <a-scene id="viewer-scene" embedded vr-mode-ui="enabled: false">
-        <!-- Licht & einfache Bühne -->
-        <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-        <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
-        <a-entity geometry="primitive: plane; width: 20; height: 20"
-                  rotation="-90 0 0"
-                  material="color: #e6e6e6; roughness: 1; metalness: 0"></a-entity>
-        <a-sky color="#f0f0f0"></a-sky>
+    <div id="info-box">Modus: <strong>AR</strong> – 1 Finger: drehen • 2 Finger: zoomen • 2 Finger ziehen: verschieben</div>
 
-        <!-- Orbit-Kamera -->
-        <a-entity id="viewer-camera"
-                  position="0 1.6 4"
-                  camera
-                  orbit-controls="target: 0 0.8 0; enableDamping: true; dampingFactor: 0.1; minDistance: 1; maxDistance: 20; rotateSpeed: 0.3; zoomSpeed: 0.6; panSpeed: 0.4; enablePan: true">
-        </a-entity>
-
-        <!-- Das INSPEKTIONS-MODELL (anderes GLB) -->
-        <a-entity id="inspect-model" gltf-model="#inspect-asset" position="0 0 0" scale="1 1 1"></a-entity>
-      </a-scene>
-    </div>
-
-    <!-- Zurück-Button -->
-    <button id="back-btn">Zurück zu AR</button>
-
-    <!-- Info-Box -->
-    <div id="info-box">Modus: <strong>AR</strong> — Version: 4.7 • Pinch-Out (Zwei-Finger-Zoom) für 3D-Viewer</div>
-
-    <!-- ========== iOS ORIENTIERUNGS-FIX ========== -->
+    <!-- iOS-Ausrichtungsfix -->
     <script>
       (function () {
-        const isIOS =
-          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
         if (!isIOS) return;
-
-        const world = document.getElementById('world-yaw');
-        if (!world) return;
-
-        const OFFSETS = {
-          'portrait-primary':   0,
-          'portrait-secondary': 180,
-          'landscape-primary':  90,
-          'landscape-secondary':-90
-        };
-
-        function getScreenAngle() {
-          if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
-          if (typeof window.orientation === 'number') return window.orientation;
-          return 0;
-        }
-        function normalizeAngle(a) { a = ((a % 360) + 360) % 360; if (a > 180) a -= 360; return a; }
-        function getOrientationType() {
-          if (screen.orientation && screen.orientation.type) return screen.orientation.type;
-          const ang = normalizeAngle(getScreenAngle());
-          if (ang === 0) return 'portrait-primary';
-          if (ang === 180 || ang === -180) return 'portrait-secondary';
-          if (ang === 90) return 'landscape-primary';
-          if (ang === -90) return 'landscape-secondary';
-          return 'portrait-primary';
-        }
-        function applyOrientationFix() {
-          const type = getOrientationType();
-          const yawFix = OFFSETS[type] ?? 0;
-          world.setAttribute('rotation', `0 ${yawFix} 0`);
-        }
-        applyOrientationFix();
-        window.addEventListener('orientationchange', applyOrientationFix);
+        const world = document.getElementById('world-yaw'); if (!world) return;
+        const OFFSETS = {'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90};
+        function ang(){ if (screen.orientation && typeof screen.orientation.angle==='number') return screen.orientation.angle;
+                        if (typeof window.orientation==='number') return window.orientation; return 0; }
+        function norm(a){ a=((a%360)+360)%360; if(a>180)a-=360; return a; }
+        function type(){ if (screen.orientation?.type) return screen.orientation.type;
+                         const a=norm(ang()); if(a===0) return 'portrait-primary';
+                         if(a===180||a===-180) return 'portrait-secondary';
+                         if(a===90) return 'landscape-primary';
+                         if(a===-90) return 'landscape-secondary'; return 'portrait-primary'; }
+        function apply(){ const yaw=OFFSETS[type()]??0; world.setAttribute('rotation',`0 ${yaw} 0`); }
+        apply(); window.addEventListener('orientationchange', apply);
       })();
     </script>
 
-    <!-- ========== MODUS-WECHSEL LOGIK (Pinch-Out → Viewer) ========== -->
+    <!-- Touch-Manipulator (Rotation, Pinch-Scale, Zwei-Finger-Pan) + Hintergrund/Model-Swap -->
     <script>
-      (function () {
-        const arScene    = document.getElementById('ar-scene');
-        const viewerWrap = document.getElementById('viewer-wrap');
-        const backBtn    = document.getElementById('back-btn');
-        const infoBox    = document.getElementById('info-box');
+      AFRAME.registerComponent('touch-manipulator', {
+        schema: {
+          inspectModel: {type: 'selector'}, // <a-asset-item> für Inspect
+          arModel:      {type: 'selector'}  // <a-asset-item> für AR
+        },
+        init: function () {
+          this.scene    = document.querySelector('#scene');
+          this.info     = document.querySelector('#info-box');
+          this.videoEl  = document.querySelector('video'); // AR.js Video (optional)
+          this.isManip  = false;
 
-        let inViewer = false;
-        let pinchStartDist = null;
-        const PINCH_FACTOR = 1.18; // ab ~18% größer gilt als "Herauszoomen"
+          // Gesture state
+          this.startRotY = 0;
+          this.startScale = new THREE.Vector3(1,1,1);
+          this.startPos = new THREE.Vector3();
+          this.touch0Start = null;
+          this.touch1Start = null;
+          this.startDist = 0;
 
-        function distance2D(t0, t1) {
-          const dx = t1.clientX - t0.clientX;
-          const dy = t1.clientY - t0.clientY;
-          return Math.hypot(dx, dy);
-        }
+          // Bind
+          this.onStart = this.onStart.bind(this);
+          this.onMove  = this.onMove.bind(this);
+          this.onEnd   = this.onEnd.bind(this);
 
-        function enterViewer() {
-          if (inViewer) return;
-          inViewer = true;
+          // Listeners global (damit auch bei großem Fingerbereich sicher)
+          document.addEventListener('touchstart', this.onStart, {passive:false});
+          document.addEventListener('touchmove',  this.onMove,  {passive:false});
+          document.addEventListener('touchend',   this.onEnd,   {passive:true});
+          document.addEventListener('touchcancel',this.onEnd,   {passive:true});
+        },
 
-          // AR-Szene „deaktivieren“ (Rendering stoppen & ausblenden)
-          try { arScene.pause(); } catch(e) {}
-          arScene.style.display = 'none';
+        enterInspect: function () {
+          if (this.isManip) return;
+          this.isManip = true;
 
-          // Viewer zeigen
-          viewerWrap.style.display = 'block';
-          backBtn.style.display = 'inline-block';
+          // Hintergrund opak setzen (AR-Video „ausblenden“)
+          try {
+            this.scene.renderer.setClearColor('#f0f0f0', 1);   // Farbe + volle Deckkraft
+            this.scene.renderer.setClearAlpha(1);
+          } catch(e){}
+
+          // AR-Video pausieren (optional, schont Akku)
+          try { if (this.videoEl && !this.videoEl.paused) this.videoEl.pause(); } catch(e){}
+
+          // Modell wechseln → Inspect
+          const inspectURL = this.data.inspectModel?.getAttribute('src');
+          if (inspectURL) this.el.setAttribute('gltf-model', inspectURL);
 
           // Info
-          infoBox.innerHTML = 'Modus: <strong>Viewer</strong> — Zwei-Finger zum Zoomen, Ein-Finger zum Drehen, Zwei-Finger+Ziehen zum Schwenken';
-        }
+          if (this.info) this.info.innerHTML = 'Modus: <strong>Viewer</strong> – Finger abheben, um zur AR zurückzukehren';
+        },
 
-        function leaveViewer() {
-          if (!inViewer) return;
-          inViewer = false;
+        leaveInspect: function () {
+          if (!this.isManip) return;
+          this.isManip = false;
 
-          // Viewer ausblenden
-          viewerWrap.style.display = 'none';
-          backBtn.style.display = 'none';
+          // Hintergrund wieder transparent (AR sichtbar)
+          try {
+            this.scene.renderer.setClearAlpha(0);
+          } catch(e){}
 
-          // AR-Szene reaktivieren
-          arScene.style.display = 'block';
-          try { arScene.play(); } catch(e) {}
+          // AR-Video weiterlaufen lassen
+          try { if (this.videoEl && this.videoEl.paused) this.videoEl.play().catch(()=>{}); } catch(e){}
+
+          // Modell zurück → AR
+          const arURL = this.data.arModel?.getAttribute('src');
+          if (arURL) this.el.setAttribute('gltf-model', arURL);
 
           // Info
-          infoBox.innerHTML = 'Modus: <strong>AR</strong> — Version: 4.7 • Pinch-Out (Zwei-Finger-Zoom) für 3D-Viewer';
-        }
+          if (this.info) this.info.innerHTML = 'Modus: <strong>AR</strong> – 1 Finger: drehen • 2 Finger: zoomen • 2 Finger ziehen: verschieben';
+        },
 
-        // Touch-Listener NUR im AR-Modus relevant
-        function onTouchStart(e) {
-          if (inViewer) return;
-          if (e.touches.length === 2) {
-            pinchStartDist = distance2D(e.touches[0], e.touches[1]);
-          } else {
-            pinchStartDist = null;
-          }
-        }
+        onStart: function (e) {
+          // Beginnt jede Geste → wechsle in Inspect
+          if (e.touches.length >= 1) {
+            // Ausgangswerte sichern
+            const rot = this.el.getAttribute('rotation');
+            this.startRotY = rot ? rot.y : 0;
 
-        function onTouchMove(e) {
-          if (inViewer) return;
-          if (e.touches.length === 2 && pinchStartDist) {
-            const nowDist = distance2D(e.touches[0], e.touches[1]);
-            if (nowDist / pinchStartDist > PINCH_FACTOR) {
-              // Wechsel in den Viewer-Modus
-              enterViewer();
-              // verhindern, dass weiteres Touch-Handling (AR) stört
-              e.preventDefault();
-              e.stopPropagation();
-              pinchStartDist = null;
+            const sc = this.el.object3D.scale;
+            this.startScale.copy(sc);
+
+            const pos = this.el.object3D.position;
+            this.startPos.copy(pos);
+
+            if (e.touches.length === 1) {
+              this.touch0Start = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+            } else if (e.touches.length >= 2) {
+              this.touch0Start = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+              this.touch1Start = {x: e.touches[1].clientX, y: e.touches[1].clientY};
+              this.startDist   = this._dist(this.touch0Start, this.touch1Start);
             }
+
+            this.enterInspect();
           }
-        }
+        },
 
-        function onTouchEnd() {
-          if (inViewer) return;
-          if (event.touches && event.touches.length < 2) {
-            pinchStartDist = null;
+        onMove: function (e) {
+          if (!this.isManip) return;
+          if (e.touches.length === 1 && this.touch0Start) {
+            // 1 Finger → ROTATION um Y
+            const dx = e.touches[0].clientX - this.touch0Start.x;
+            const rotY = this.startRotY + dx * 0.2; // Empfindlichkeit
+            const r = this.el.getAttribute('rotation') || {x:0,y:0,z:0};
+            this.el.setAttribute('rotation', `${r.x} ${rotY} ${r.z}`);
+            e.preventDefault();
+          } else if (e.touches.length === 2 && this.touch0Start && this.touch1Start) {
+            // 2 Finger → PINCH = SCALE, 2-Finger-Drag = PAN (X/Z)
+            const t0 = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+            const t1 = {x:e.touches[1].clientX, y:e.touches[1].clientY};
+
+            const nowDist = this._dist(t0, t1);
+            const scaleFactor = THREE.MathUtils.clamp(nowDist / (this.startDist||nowDist), 0.25, 4.0);
+            const newS = this.startScale.clone().multiplyScalar(scaleFactor);
+            this.el.setAttribute('scale', `${newS.x} ${newS.y} ${newS.z}`);
+
+            // PAN: Mittelpunktverschiebung relativ zum Start → in X/Z umrechnen
+            const midStart = {x:(this.touch0Start.x+this.touch1Start.x)/2, y:(this.touch0Start.y+this.touch1Start.y)/2};
+            const midNow   = {x:(t0.x+t1.x)/2, y:(t0.y+t1.y)/2};
+            const mdx = (midNow.x - midStart.x);
+            const mdy = (midNow.y - midStart.y);
+
+            // einfache Abbildung: Pixel → Meter-Faktor (anpassen nach Geschmack)
+            const kMove = 0.02; // 50 px ≈ 1 m
+            const newX = this.startPos.x + mdx * kMove;
+            const newZ = this.startPos.z + mdy * kMove; // nach unten ziehen → +Z (anpassen falls invertiert)
+            this.el.setAttribute('position', `${newX} ${this.startPos.y} ${newZ}`);
+
+            e.preventDefault();
           }
+        },
+
+        onEnd: function (e) {
+          // Wenn keine Finger mehr aufliegen → zurück in AR
+          const touches = (e.touches) ? e.touches.length : 0;
+          if (touches === 0) {
+            this.touch0Start = null; this.touch1Start = null; this.startDist = 0;
+            this.leaveInspect();
+          }
+        },
+
+        _dist: function(a,b){ const dx=b.x-a.x, dy=b.y-a.y; return Math.hypot(dx,dy); },
+        remove: function(){
+          document.removeEventListener('touchstart', this.onStart);
+          document.removeEventListener('touchmove',  this.onMove);
+          document.removeEventListener('touchend',   this.onEnd);
+          document.removeEventListener('touchcancel',this.onEnd);
         }
-
-        // Global registrieren (über der AR-Szene)
-        document.addEventListener('touchstart', onTouchStart, {passive: false});
-        document.addEventListener('touchmove',  onTouchMove,  {passive: false});
-        document.addEventListener('touchend',   onTouchEnd,   {passive: true});
-
-        // Zurück-Button
-        backBtn.addEventListener('click', leaveViewer);
-      })();
+      });
     </script>
+
+    <div id="info-box">Version: 4.7</div>
   </body>
 </html>
