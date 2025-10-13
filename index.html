@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Technologiepark & Studierendenzentrum – Viewer</title>
+  <meta name="color-scheme" content="light" />
+  <!-- =====================
+       Grundstyling
+       ===================== -->
+  <style>
+    :root{ --bg:#ffffff; --text:#212121; --muted:#4b5563; --accent:#F39205; --border:rgba(0,0,0,0.08); --radius:0 }
+    *{ box-sizing:border-box }
+    html,body{ height:100%; margin:0 }
+    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--text); background:var(--bg); display:grid; grid-template-rows:auto 1fr auto; min-height:100dvh; overflow:hidden }
+    header{ text-align:center; position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--border) }
+    .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
+    .site-title{ text-align:left; line-height:1.1 }
+    .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
+    .logo{ height:clamp(50px,4.3vw,60px); width:auto }
+    main{ position:relative; min-height:0 }
+    #content-preview{ position:absolute; inset:0; background:var(--bg) }
+    a-scene{ width:100%; height:100%; display:block; touch-action:none }
+    footer{ position:sticky; bottom:0; z-index:10; background:#fff; border-top:1px solid var(--border); text-align:center }
+    .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap }
+    .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(16px,2.5vw,18px); padding:12px 22px; border:0; border-radius:var(--radius); cursor:pointer }
+    .footer-text{ font-size:clamp(14px,2.2vw,16px); color:var(--muted) }
+  </style>
+  <!-- =====================
+       A-Frame (3D Framework)
+       ===================== -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+</head>
+<body>
+  <!-- =====================
+       Kopfzeile
+       ===================== -->
+  <header>
+    <div class="header-inner">
+      <div class="site-title" aria-label="Projektname">
+        <div class="top">Technologiepark</div>
+        <div class="bottom">&amp; Studierendenzentrum</div>
+      </div>
+      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
+    </div>
+  </header>
+
+  <!-- =====================
+       Hauptbereich: 3D-Viewer
+       ===================== -->
+  <main>
+    <div id="content-preview">
+      <a-scene embedded xr-mode-ui="enabled: false">
+        <!-- Lichtquellen -->
+        <a-entity light="type: ambient; intensity: 0.9"></a-entity>
+        <a-entity light="type: directional; intensity: 1.0" position="1 2 1"></a-entity>
+        <!-- 3D-Modell -->
+        <a-entity id="model" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-entity>
+        <!-- Kamera -->
+        <a-entity id="cam" camera position="0 1.6 6" look-controls="enabled:false" wasd-controls="enabled:false"></a-entity>
+      </a-scene>
+    </div>
+  </main>
+
+  <!-- =====================
+       Fußzeile
+       ===================== -->
+  <footer>
+    <div class="footer-inner">
+      <button class="live-btn" id="liveBtn">Live</button>
+      <span class="footer-text">Lass dir das Gebäude in der Realität darstellen.</span>
+    </div>
+  </footer>
+
+  <!-- =====================
+       Interaktion & Funktion
+       ===================== -->
+  <script>
+    // === GLB Viewer ===
+    const scene = document.querySelector('a-scene');
+    const model = document.getElementById('model');
+    const cam   = document.getElementById('cam');
+    const GLB_URL = './assets/gameobjectohnekellerreduziert.glb';
+
+    // Steuerungsparameter
+    const rotSpeed = 0.3; // deg per px
+    const zoomMin = 0.5, zoomMax = 200, pinchFactor = 0.005;
+    let isDragging=false, lastX=0, lastY=0, lastPinch=null;
+
+    // Hilfsfunktionen
+    function clamp(v,a,b){ return Math.min(b, Math.max(a,v)); }
+    function getRot(){ const r=model.getAttribute('rotation'); return {x:r.x,y:r.y,z:r.z}; }
+    function setRot(x,y,z){ model.setAttribute('rotation', `${x} ${y} ${z}`); }
+    function getZ(){ return cam.object3D.position.z; }
+    function setZ(z){ cam.object3D.position.z = clamp(z, zoomMin, zoomMax); }
+
+    // Modell laden
+    function loadGLB(){
+      model.setAttribute('gltf-model', GLB_URL);
+      model.addEventListener('model-loaded', fitView, { once:true });
+    }
+
+    // Kamera auf Modell anpassen
+    function fitView(){
+      const mesh = model.getObject3D('mesh'); if (!mesh) return;
+      mesh.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(mesh);
+      const size = new THREE.Vector3(); box.getSize(size);
+      const center = new THREE.Vector3(); box.getCenter(center);
+      model.object3D.position.copy(center.multiplyScalar(-1));
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov = (cam.getObject3D('camera').fov || 60) * Math.PI/180;
+      const dist = (maxDim/2)/Math.tan(fov/2) + maxDim*0.25;
+      setZ(dist);
+    }
+
+    // Benutzersteuerung (Maus + Touch)
+    function bindControls(){
+      const canvas = scene.canvas; if (!canvas) return;
+      canvas.addEventListener('pointerdown', e=>{ isDragging=true; lastX=e.clientX; lastY=e.clientY; canvas.setPointerCapture(e.pointerId); });
+      canvas.addEventListener('pointermove', e=>{
+        if (!isDragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+        const r=getRot(); setRot(clamp(r.x + dy*rotSpeed, -89, 89), r.y + dx*rotSpeed, r.z);
+      });
+      ['pointerup','pointercancel','pointerleave'].forEach(t=>canvas.addEventListener(t,()=>{isDragging=false;}));
+      canvas.addEventListener('wheel', e=>{ e.preventDefault(); setZ(getZ() + e.deltaY*0.01); }, {passive:false});
+      canvas.addEventListener('touchstart', e=>{ if (e.touches.length===1){ lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; isDragging=true; lastPinch=null; } else if (e.touches.length===2){ isDragging=false; lastPinch=dist(e.touches[0], e.touches[1]); } }, {passive:false});
+      canvas.addEventListener('touchmove', e=>{ e.preventDefault(); if (e.touches.length===1 && isDragging){ const t=e.touches[0]; const dx=t.clientX-lastX, dy=t.clientY-lastY; lastX=t.clientX; lastY=t.clientY; const r=getRot(); setRot(clamp(r.x + dy*rotSpeed, -89, 89), r.y + dx*rotSpeed, r.z); } else if (e.touches.length===2){ const d=dist(e.touches[0], e.touches[1]); if (lastPinch!=null){ setZ(getZ() + (lastPinch-d)*pinchFactor); } lastPinch=d; } }, {passive:false});
+      canvas.addEventListener('touchend', ()=>{ isDragging=false; lastPinch=null; });
+      function dist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+    }
+
+    // Initialisierung nach Laden der Szene
+    if (scene.hasLoaded) afterScene(); else scene.addEventListener('loaded', afterScene);
+    function afterScene(){ loadGLB(); bindControls(); }
+
+    // Navigation zur Live-Ansicht
+    document.getElementById('liveBtn')?.addEventListener('click', ()=>{ location.href = 'live.html'; });
+  </script>
+</body>
+</html>
