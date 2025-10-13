@@ -1,51 +1,128 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GLB Viewer (A‑Frame · Orbit)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>A-Frame GLB-Viewer</title>
 
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
 
-<!-- A‑Frame (Core) -->
-<script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-<!-- Orbit Controls-Komponente (leichtgewichtig) -->
-<script src="https://unpkg.com/aframe-orbit-controls-component@1.3.1/dist/aframe-orbit-controls-component.min.js"></script>
-
-
-<style>
-html, body { height: 100%; margin: 0; }
-a-scene { height: 100%; }
-</style>
+  <style>
+    html, body { height:100%; margin:0; }
+    a-scene    { width:100%; height:100%; touch-action:none; background:#f3f3f3; }
+  </style>
 </head>
 <body>
-<a-scene renderer="antialias: true; physicallyCorrectLights: true" background="color: #f5f7fa">
-<a-assets>
-<a-asset-item id="m" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-</a-assets>
+  <a-scene>
+    <a-assets>
+      <!-- Dein GLB -->
+      <a-asset-item id="m" src="assets/gameobjectohnekellerreduziert.glb" response-type="arraybuffer" crossorigin="anonymous"></a-asset-item>
+    </a-assets>
 
+    <!-- Licht -->
+    <a-entity light="type: ambient; intensity: 0.9"></a-entity>
+    <a-entity light="type: directional; intensity: 1.0" position="1 2 1"></a-entity>
 
-<!-- schlichtes Licht -->
-<a-entity light="type: ambient; intensity: 0.7"></a-entity>
-<a-entity light="type: directional; intensity: 0.9" position="1 2 1"></a-entity>
+    <!-- Modell -->
+    <a-entity id="model" gltf-model="#m" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-entity>
 
+    <!-- Kamera -->
+    <a-entity id="cam" camera position="0 1.6 6" look-controls="enabled:false" wasd-controls="enabled:false"></a-entity>
+  </a-scene>
 
-<!-- Modell -->
-<a-entity id="model" gltf-model="#m" position="0 0 0" shadow="cast: true; receive: true"></a-entity>
+  <script>
+    const scene = document.querySelector('a-scene');
+    const model = document.getElementById('model');
+    const cam   = document.getElementById('cam');
 
+    const rotSpeed = 0.3;             // Drehgeschwindigkeit
+    const zoomMin  = 0.5, zoomMax=200;
+    const pinchFactor = 0.005;
 
-<!-- Kamera mit Orbit (Drehen: Drag, Zoomen: Scroll/Pinch, Pannen: Shift+Drag) -->
-<a-entity position="0 1.6 6">
-<a-entity camera
-look-controls-enabled="false"
-wasd-controls-enabled="false"
-orbit-controls="
-target: #model;
-enableDamping: true;
-dampingFactor: 0.12;
-minDistance: 0.5;
-maxDistance: 200;
-"></a-entity>
-</a-entity>
-</a-scene>
+    let isDragging=false, lastX=0, lastY=0, lastPinch=null;
+
+    function clamp(v,a,b){ return Math.min(b, Math.max(a,v)); }
+    function getRot(){ const r=model.getAttribute('rotation'); return {x:r.x,y:r.y,z:r.z}; }
+    function setRot(x,y,z){ model.setAttribute('rotation', `${x} ${y} ${z}`); }
+    function getZ(){ return cam.object3D.position.z; }
+    function setZ(z){ cam.object3D.position.z = clamp(z, zoomMin, zoomMax); }
+
+    // Automatisches Zentrieren nach Laden
+    model.addEventListener('model-loaded', fitView);
+    function fitView(){
+      const mesh = model.getObject3D('mesh');
+      if (!mesh) return;
+      mesh.updateMatrixWorld(true);
+
+      const box = new THREE.Box3().setFromObject(mesh);
+      const size = new THREE.Vector3(); box.getSize(size);
+      const center = new THREE.Vector3(); box.getCenter(center);
+
+      const offset = center.clone().multiplyScalar(-1);
+      model.object3D.position.copy(offset);
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov = (cam.getObject3D('camera').fov || 60) * Math.PI / 180;
+      const dist = (maxDim/2) / Math.tan(fov/2) + maxDim * 0.25;
+      setZ(dist);
+    }
+
+    // Steuerung
+    if (scene.hasLoaded) bindControls(); else scene.addEventListener('loaded', bindControls);
+
+    function bindControls(){
+      const canvas = scene.canvas;
+      if (!canvas) return;
+
+      // Maus/Touch drehen
+      canvas.addEventListener('pointerdown', e=>{
+        isDragging=true; lastX=e.clientX; lastY=e.clientY; canvas.setPointerCapture(e.pointerId);
+      });
+      canvas.addEventListener('pointermove', e=>{
+        if(!isDragging) return;
+        const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+        const r=getRot();
+        // Vertikale Bewegung umkehren:
+        const newX = clamp(r.x + dy*rotSpeed, -89, 89);
+        const newY = r.y + dx*rotSpeed;
+        setRot(newX, newY, r.z);
+      });
+      ['pointerup','pointercancel','pointerleave'].forEach(t=>canvas.addEventListener(t,()=>isDragging=false));
+
+      // Mauszoom
+      canvas.addEventListener('wheel', e=>{
+        e.preventDefault();
+        setZ(getZ()+e.deltaY*0.01);
+      },{passive:false});
+
+      // Touchsteuerung
+      canvas.addEventListener('touchstart', e=>{
+        if(e.touches.length===1){
+          lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; isDragging=true; lastPinch=null;
+        }else if(e.touches.length===2){
+          isDragging=false; lastPinch=dist(e.touches[0], e.touches[1]);
+        }
+      },{passive:false});
+      canvas.addEventListener('touchmove', e=>{
+        e.preventDefault();
+        if(e.touches.length===1 && isDragging){
+          const t=e.touches[0], dx=t.clientX-lastX, dy=t.clientY-lastY;
+          lastX=t.clientX; lastY=t.clientY;
+          const r=getRot();
+          const newX = clamp(r.x + dy*rotSpeed, -89, 89); // umgekehrt
+          const newY = r.y + dx*rotSpeed;
+          setRot(newX, newY, r.z);
+        } else if(e.touches.length===2){
+          const d=dist(e.touches[0], e.touches[1]);
+          if(lastPinch!=null){ setZ(getZ()+(lastPinch-d)*pinchFactor); }
+          lastPinch=d;
+        }
+      },{passive:false});
+      canvas.addEventListener('touchend',()=>{isDragging=false; lastPinch=null;});
+
+      function dist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
+    }
+  </script>
 </body>
 </html>
