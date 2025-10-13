@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+
+    <!-- AR.js (Location-based) -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+
+    <!-- Orbit Controls für den Viewer-Modus -->
+    <script src="https://unpkg.com/aframe-orbit-controls-component@1.4.0/dist/aframe-orbit-controls-component.min.js"></script>
+
+    <style>
+      /* Infofenster unten */
+      #info-box {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(221,221,221,0.7);
+        color: #000;
+        font-family: sans-serif;
+        font-size: 14px;
+        padding: 10px;
+        box-sizing: border-box;
+        text-align: left;
+        z-index: 10;
+      }
+
+      /* Zurück-Button im Viewer-Modus */
+      #back-btn {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        background: rgba(0,0,0,0.65);
+        color: #fff;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-family: sans-serif;
+        font-size: 14px;
+        display: none; /* nur im Viewer-Modus anzeigen */
+      }
+
+      /* Viewer-Szene überlagert die AR-Szene bei Bedarf */
+      #viewer-wrap {
+        position: fixed;
+        inset: 0;
+        display: none; /* erst sichtbar machen, wenn umgeschaltet */
+        z-index: 15;   /* über AR-Szene, unter dem Back-Button & Info-Box */
+        background: #f0f0f0;
+      }
+    </style>
+  </head>
+
+  <body style="margin: 0; overflow: hidden;">
+    <!-- ========== AR-SZENE (GPS) ========== -->
+    <a-scene
+      id="ar-scene"
+      renderer="logarithmicDepthBuffer: true;"
+      embedded
+      loading-screen="enabled: false;"
+      arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
+    >
+      <a-assets>
+        <!-- AR-Modell -->
+        <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        <!-- Viewer-Modell (ANDERES GLB) -->
+        <a-asset-item id="inspect-asset" src="assets/gameobject.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- Welt-Drehung (iOS-Orientierungsfix greift hier) -->
+      <a-entity id="world-yaw" rotation="0 0 0">
+        <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+          <a-entity id="ar-model" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+        </a-entity>
+      </a-entity>
+
+      <!-- Simulierte GPS-Kamera (für echten Betrieb einfach die andere Zeile verwenden) -->
+      <a-camera gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      <!-- ECHT: <a-camera gps-camera="minAccuracy: 50" rotation-reader></a-camera> -->
+    </a-scene>
+
+    <!-- ========== VIEWER-SZENE (GESTEN/ORBIT) ========== -->
+    <div id="viewer-wrap">
+      <a-scene id="viewer-scene" embedded vr-mode-ui="enabled: false">
+        <!-- Licht & einfache Bühne -->
+        <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+        <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
+        <a-entity geometry="primitive: plane; width: 20; height: 20"
+                  rotation="-90 0 0"
+                  material="color: #e6e6e6; roughness: 1; metalness: 0"></a-entity>
+        <a-sky color="#f0f0f0"></a-sky>
+
+        <!-- Orbit-Kamera -->
+        <a-entity id="viewer-camera"
+                  position="0 1.6 4"
+                  camera
+                  orbit-controls="target: 0 0.8 0; enableDamping: true; dampingFactor: 0.1; minDistance: 1; maxDistance: 20; rotateSpeed: 0.3; zoomSpeed: 0.6; panSpeed: 0.4; enablePan: true">
+        </a-entity>
+
+        <!-- Das INSPEKTIONS-MODELL (anderes GLB) -->
+        <a-entity id="inspect-model" gltf-model="#inspect-asset" position="0 0 0" scale="1 1 1"></a-entity>
+      </a-scene>
+    </div>
+
+    <!-- Zurück-Button -->
+    <button id="back-btn">Zurück zu AR</button>
+
+    <!-- Info-Box -->
+    <div id="info-box">Modus: <strong>AR</strong> — Version: 4.7 • Pinch-Out (Zwei-Finger-Zoom) für 3D-Viewer</div>
+
+    <!-- ========== iOS ORIENTIERUNGS-FIX ========== -->
+    <script>
+      (function () {
+        const isIOS =
+          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!isIOS) return;
+
+        const world = document.getElementById('world-yaw');
+        if (!world) return;
+
+        const OFFSETS = {
+          'portrait-primary':   0,
+          'portrait-secondary': 180,
+          'landscape-primary':  90,
+          'landscape-secondary':-90
+        };
+
+        function getScreenAngle() {
+          if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+          if (typeof window.orientation === 'number') return window.orientation;
+          return 0;
+        }
+        function normalizeAngle(a) { a = ((a % 360) + 360) % 360; if (a > 180) a -= 360; return a; }
+        function getOrientationType() {
+          if (screen.orientation && screen.orientation.type) return screen.orientation.type;
+          const ang = normalizeAngle(getScreenAngle());
+          if (ang === 0) return 'portrait-primary';
+          if (ang === 180 || ang === -180) return 'portrait-secondary';
+          if (ang === 90) return 'landscape-primary';
+          if (ang === -90) return 'landscape-secondary';
+          return 'portrait-primary';
+        }
+        function applyOrientationFix() {
+          const type = getOrientationType();
+          const yawFix = OFFSETS[type] ?? 0;
+          world.setAttribute('rotation', `0 ${yawFix} 0`);
+        }
+        applyOrientationFix();
+        window.addEventListener('orientationchange', applyOrientationFix);
+      })();
+    </script>
+
+    <!-- ========== MODUS-WECHSEL LOGIK (Pinch-Out → Viewer) ========== -->
+    <script>
+      (function () {
+        const arScene    = document.getElementById('ar-scene');
+        const viewerWrap = document.getElementById('viewer-wrap');
+        const backBtn    = document.getElementById('back-btn');
+        const infoBox    = document.getElementById('info-box');
+
+        let inViewer = false;
+        let pinchStartDist = null;
+        const PINCH_FACTOR = 1.18; // ab ~18% größer gilt als "Herauszoomen"
+
+        function distance2D(t0, t1) {
+          const dx = t1.clientX - t0.clientX;
+          const dy = t1.clientY - t0.clientY;
+          return Math.hypot(dx, dy);
+        }
+
+        function enterViewer() {
+          if (inViewer) return;
+          inViewer = true;
+
+          // AR-Szene „deaktivieren“ (Rendering stoppen & ausblenden)
+          try { arScene.pause(); } catch(e) {}
+          arScene.style.display = 'none';
+
+          // Viewer zeigen
+          viewerWrap.style.display = 'block';
+          backBtn.style.display = 'inline-block';
+
+          // Info
+          infoBox.innerHTML = 'Modus: <strong>Viewer</strong> — Zwei-Finger zum Zoomen, Ein-Finger zum Drehen, Zwei-Finger+Ziehen zum Schwenken';
+        }
+
+        function leaveViewer() {
+          if (!inViewer) return;
+          inViewer = false;
+
+          // Viewer ausblenden
+          viewerWrap.style.display = 'none';
+          backBtn.style.display = 'none';
+
+          // AR-Szene reaktivieren
+          arScene.style.display = 'block';
+          try { arScene.play(); } catch(e) {}
+
+          // Info
+          infoBox.innerHTML = 'Modus: <strong>AR</strong> — Version: 4.7 • Pinch-Out (Zwei-Finger-Zoom) für 3D-Viewer';
+        }
+
+        // Touch-Listener NUR im AR-Modus relevant
+        function onTouchStart(e) {
+          if (inViewer) return;
+          if (e.touches.length === 2) {
+            pinchStartDist = distance2D(e.touches[0], e.touches[1]);
+          } else {
+            pinchStartDist = null;
+          }
+        }
+
+        function onTouchMove(e) {
+          if (inViewer) return;
+          if (e.touches.length === 2 && pinchStartDist) {
+            const nowDist = distance2D(e.touches[0], e.touches[1]);
+            if (nowDist / pinchStartDist > PINCH_FACTOR) {
+              // Wechsel in den Viewer-Modus
+              enterViewer();
+              // verhindern, dass weiteres Touch-Handling (AR) stört
+              e.preventDefault();
+              e.stopPropagation();
+              pinchStartDist = null;
+            }
+          }
+        }
+
+        function onTouchEnd() {
+          if (inViewer) return;
+          if (event.touches && event.touches.length < 2) {
+            pinchStartDist = null;
+          }
+        }
+
+        // Global registrieren (über der AR-Szene)
+        document.addEventListener('touchstart', onTouchStart, {passive: false});
+        document.addEventListener('touchmove',  onTouchMove,  {passive: false});
+        document.addEventListener('touchend',   onTouchEnd,   {passive: true});
+
+        // Zurück-Button
+        backBtn.addEventListener('click', leaveViewer);
+      })();
+    </script>
+  </body>
+</html>
