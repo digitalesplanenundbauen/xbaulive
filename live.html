@@ -138,18 +138,6 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
-
-    // Workaround: Body-Styles nach AR.js überschreiben (Chrome-Fix)
-    function fixBodyStyles() {
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-      document.documentElement.style.position = '';
-      document.documentElement.style.width = '';
-      document.documentElement.style.height = '';
-    }
-    window.addEventListener('arjs-video-loaded', fixBodyStyles);
-    window.addEventListener('resize', fixBodyStyles);
   </script>
 </body>
 </html>
