@@ -18,18 +18,13 @@
       position:sticky; 
       top:0; 
       z-index:10; 
-      background:#ececec; /* etwas dunkleres Grau */
-      border-bottom:1px solid var(--border) 
+      background:#ffffff;
+      border-bottom:2px solid #d0d0d0; /* stärkere Linie */
     }
     .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
     .site-title{ text-align:left; line-height:1.1 }
     .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
-    .logo{ 
-      height:clamp(50px,4.3vw,60px); 
-      width:auto; 
-      background:#fff; /* Hintergrund der SVG bleibt weiß */
-      border-radius:0; 
-    }
+    .logo{ height:clamp(50px,4.3vw,60px); width:auto }
     main{ position:relative; min-height:0 }
     #content-preview{ position:absolute; inset:0; background:var(--bg) }
     a-scene{ width:100%; height:100%; display:block; touch-action:none }
@@ -37,8 +32,8 @@
       position:sticky; 
       bottom:0; 
       z-index:10; 
-      background:#f5f5f5; /* etwas dunkleres Grau */
-      border-top:1px solid var(--border); 
+      background:#ffffff;
+      border-top:2px solid #d0d0d0; /* stärkere Linie */
       text-align:center 
     }
     .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap }
