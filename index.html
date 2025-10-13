@@ -13,15 +13,34 @@
     *{ box-sizing:border-box }
     html,body{ height:100%; margin:0 }
     body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--text); background:var(--bg); display:grid; grid-template-rows:auto 1fr auto; min-height:100dvh; overflow:hidden }
-    header{ text-align:center; position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--border) }
+    header{ 
+      text-align:center; 
+      position:sticky; 
+      top:0; 
+      z-index:10; 
+      background:#ececec; /* etwas dunkleres Grau */
+      border-bottom:1px solid var(--border) 
+    }
     .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
     .site-title{ text-align:left; line-height:1.1 }
     .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
-    .logo{ height:clamp(50px,4.3vw,60px); width:auto }
+    .logo{ 
+      height:clamp(50px,4.3vw,60px); 
+      width:auto; 
+      background:#fff; /* Hintergrund der SVG bleibt weiß */
+      border-radius:0; 
+    }
     main{ position:relative; min-height:0 }
     #content-preview{ position:absolute; inset:0; background:var(--bg) }
     a-scene{ width:100%; height:100%; display:block; touch-action:none }
-    footer{ position:sticky; bottom:0; z-index:10; background:#fff; border-top:1px solid var(--border); text-align:center }
+    footer{ 
+      position:sticky; 
+      bottom:0; 
+      z-index:10; 
+      background:#f5f5f5; /* etwas dunkleres Grau */
+      border-top:1px solid var(--border); 
+      text-align:center 
+    }
     .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap }
     .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(16px,2.5vw,18px); padding:12px 22px; border:0; border-radius:var(--radius); cursor:pointer }
     .footer-text{ 
