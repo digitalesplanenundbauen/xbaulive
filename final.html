@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GLB Viewer – A‑Frame</title>
+
+
+<!-- A‑Frame core -->
+<script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+<!-- Orbit Controls for A‑Frame (zoomen/drehen per Maus/Touch) -->
+<script src="https://unpkg.com/aframe-orbit-controls-component@1.3.1/dist/aframe-orbit-controls-component.min.js"></script>
+
+
+<style>
+html, body {
+height: 100%;
+margin: 0;
+background: #0b1520; /* dunkler Rand hinter dem Canvas */
+}
+.wrap { height: 100%; }
+/* optional: kleiner Ladehinweis oben links */
+#loading {
+position: fixed; inset: 16px auto auto 16px;
+color: #d9e6f2; font-family: system-ui, sans-serif; font-size: 14px;
+opacity: .9; letter-spacing: .2px;
+}
+</style>
+</head>
+<body>
+<div id="loading">Lade GLB …</div>
+
+
+<div class="wrap">
+<a-scene renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true" background="color: #eef3f9">
+<!-- Assets -->
+<a-assets timeout="60000">
+<a-asset-item id="modelGLB" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+</a-assets>
+
+
+<!-- Boden (optional, zum Orientieren) -->
+<a-entity position="0 0 0">
+<a-grid src="" color="#dfe7f1" interval="1" size="200" material="wireframe: false; opacity: 0.35"></a-grid>
+</a-entity>
+
+
+<!-- Beleuchtung -->
+<a-entity light="type: ambient; intensity: 0.6; color: #ffffff"></a-entity>
+<a-entity light="type: directional; intensity: 1.0; castShadow: true" position="2 4 2"></a-entity>
+
+
+<!-- 3D Modell -->
+<a-entity id="model"
+gltf-model="#modelGLB"
+position="0 0 0"
+rotation="0 0 0"
+scale="1 1 1"
+shadow="cast: true; receive: true"></a-entity>
+
+
+<!-- Kamera mit Orbit Controls (drehen: Drag, zoomen: Scroll/Pinch, pannen: Shift+Drag) -->
+<a-entity id="cameraRig" position="0 2 8">
+<a-entity id="camera"
+camera
+orbit-controls="
+target: #model;
+enableDamping: true;
+dampingFactor: 0.1;
+rotateSpeed: 0.25;
+minDistance: 1;
+maxDistance: 200;
+</html>
