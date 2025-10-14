@@ -5,71 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Live – AR-Modus</title>
 
-  <!-- =======================
-       Grundstyling
-       ======================= -->
   <style>
     :root{
       --bg:#ffffff; --text:#212121; --muted:#4b5563;
       --accent:#F39205; --border:#d0d0d0; --radius:0
     }
-    *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0 }
-    body{
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color:var(--text); background:var(--bg);
-      /* vier Reihen: Header – Inhalt – Footer – Footer secondary */
-      display:grid; grid-template-rows:auto 1fr auto auto;
-      min-height:100dvh; overflow:hidden;
-    }
+    *{ box-sizing:border-box; margin:0; padding:0 }
+    html,body{ height:100%; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
 
-    /* Header */
-    header{
-      text-align:center; position:sticky; top:0; z-index:10;
-      background:#fff; border-bottom:1px solid var(--border);
-    }
-    .header-inner{
-      max-width:1200px; margin:0 auto; padding:16px 20px;
-      display:flex; align-items:center; justify-content:center; gap:18px
-    }
-    .site-title{ text-align:left; line-height:1.1 }
-    .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
-    .logo{ height:clamp(40px,4.3vw,60px); width:auto }
-
-    /* Hauptbereich */
-    main{ position:relative; min-height:0 }
-
-    /* Sichtfenster für AR (hart an den Viewport gekoppelt) */
-    #content-preview{
-      position:fixed;   /* wichtig: unabhängig vom Grid */
-      left:0; right:0;  /* top/bottom setzt JS nach Header/Footer-Höhe */
+    /* Szene belegt den kompletten Viewport (wie im funktionierenden Beispiel) */
+    .scene-wrap{
+      position:fixed; inset:0;   /* volle Fläche */
+      overflow:hidden;           /* falls Video „übersteht“ */
+      z-index:1;                 /* unter Header/Footer */
       background:transparent;
-      overflow:hidden;  /* falls AR.js größer will */
-      z-index:1;        /* unter Header/Footer (z-index:10) */
     }
-
-    /* Szene im Container lassen */
-    a-scene[embedded]{
+    a-scene{
       position:absolute !important;
       inset:0 !important;
       width:100% !important;
       height:100% !important;
-      max-width:100% !important;
-      max-height:100% !important;
       background:transparent !important;
     }
-
-    /* A-Frame Canvas strikt einpassen */
-    a-scene[embedded] canvas.a-canvas,
-    a-scene[embedded] .a-canvas{
+    /* Canvas + Video exakt einpassen (Chrome-sicher) */
+    a-scene canvas.a-canvas, a-scene .a-canvas{
       position:absolute !important;
       inset:0 !important;
       width:100% !important;
       height:100% !important;
       display:block !important;
     }
-
-    /* AR.js Video strikt einpassen (verhindert Hochskalierung in Chrome) */
     .arjs-video{
       position:absolute !important;
       inset:0 !important;
@@ -80,41 +45,47 @@
       max-height:100% !important;
     }
 
-    /* Footer (Haupt) */
-    footer{
-      position:sticky; bottom:0; z-index:10;
-      background:#fff; border-top:1px solid var(--border); text-align:center;
+    /* Header/Footers als Overlays darüber */
+    header, .footer-main, .footer-secondary{
+      position:fixed; left:0; right:0;
+      background:#fff; z-index:10;
     }
-    .footer-inner{
-      max-width:1200px; margin:0 auto; padding:17px 22px;
-      display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap;
+    header{
+      top:0; border-bottom:1px solid var(--border);
     }
-    .live-btn{
+    .footer-main{
+      bottom:22px; /* Abstand zur Sekundär-Fußzeile */
+      border-top:1px solid var(--border);
+    }
+    .footer-secondary{
+      bottom:0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+    }
+
+    .header-inner, .footer-inner, .footer-secondary-inner{
+      max-width:1200px; margin:0 auto;
+      display:flex; align-items:center; justify-content:center; gap:18px; flex-wrap:wrap;
+      padding:16px 20px;
+    }
+    .footer-secondary-inner{ padding:5px 18px }
+    .site-title{ text-align:left; line-height:1.1 }
+    .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
+    .logo{ height:clamp(40px,4.3vw,60px); width:auto }
+
+    .btn{
       background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px;
       font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer;
     }
-
-    /* Footer (Secondary) */
-    .footer-secondary{
-      background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
-      text-align:center; font-size:11px; padding:0;
-    }
-    .footer-secondary-inner{ max-width:1200px; margin:0 auto; padding:5px 18px }
-    .footer-lab{ color:#4b5563; font-size:11px; font-weight:400 }
-    .footer-lab strong{ font-weight:500 }
+    .footer-lab{ color:#4b5563; font-size:11px }
+    .footer-lab strong{ font-weight:600 }
   </style>
 
-  <!-- =======================
-       A-Frame + AR.js
-       ======================= -->
+  <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
-  <!-- =======================
-       Kopfzeile
-       ======================= -->
+  <!-- Header-Overlay -->
   <header>
     <div class="header-inner">
       <div class="site-title">
@@ -125,60 +96,48 @@
     </div>
   </header>
 
-  <!-- =======================
-       Hauptbereich: AR-Szene
-       ======================= -->
-  <main>
-    <div id="content-preview">
-      <a-scene
-        renderer="logarithmicDepthBuffer: true; alpha: true;"
-        embedded
-        loading-screen="enabled: false;"
-        xr-mode-ui="enabled: false"
-        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+  <!-- Szene: volle Fläche, Header/Footer liegen darüber -->
+  <div class="scene-wrap" aria-hidden="false">
+    <a-scene
+      renderer="logarithmicDepthBuffer: true; alpha: true;"
+      embedded
+      loading-screen="enabled: false;"
+      xr-mode-ui="enabled: false"
+      arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+      <a-assets>
+        <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+      </a-assets>
 
-        <!-- GLB aus Assets -->
-        <a-assets>
-          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-        </a-assets>
-
-        <!-- Welt-Node + Geoposition -->
-        <a-entity id="world-yaw" rotation="0 0 0">
-          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-            <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
-          </a-entity>
+      <a-entity id="world-yaw" rotation="0 0 0">
+        <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+          <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
         </a-entity>
+      </a-entity>
 
-        <!-- Kamera (Simulation an / echtes GPS per Button) -->
-        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
-      </a-scene>
-    </div>
-  </main>
+      <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+    </a-scene>
+  </div>
 
-  <!-- =======================
-       Fußzeilen
-       ======================= -->
-  <footer>
+  <!-- Haupt-Footer (Overlay) -->
+  <div class="footer-main">
     <div class="footer-inner">
-      <button class="live-btn" id="backBtn">Zurück</button>
-      <button class="live-btn" id="gpsBtn">GPS ein</button>
+      <button class="btn" id="backBtn">Zurück</button>
+      <button class="btn" id="gpsBtn">GPS ein</button>
     </div>
-  </footer>
+  </div>
 
-  <footer class="footer-secondary">
+  <!-- Sekundärer Footer (Overlay) -->
+  <div class="footer-secondary">
     <div class="footer-secondary-inner">
       <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – RaumS 0.36</span>
     </div>
-  </footer>
+  </div>
 
-  <!-- =======================
-       Interaktion & Funktion
-       ======================= -->
   <script>
-    // Zurück zur Startseite
+    // Navigation zurück zur Startseite
     document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
 
-    // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
+    // iOS-Orientierungsfix
     (function(){
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -204,27 +163,6 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
-
-    // >>> Chrome-Fix: AR-Sichtfenster exakt zwischen Header & Footern klemmen
-    function sizeARViewport(){
-      const header = document.querySelector('header');
-      // zwei Footer vorhanden: erster (Haupt) + zweiter (secondary)
-      const footers = Array.from(document.querySelectorAll('footer'));
-      const footerMain = footers[0] || null;
-      const footerSecondary = document.querySelector('footer.footer-secondary');
-
-      const headerH = header ? header.offsetHeight : 0;
-      const footerMainH = footerMain ? footerMain.offsetHeight : 0;
-      const footerSecH  = footerSecondary ? footerSecondary.offsetHeight : 0;
-
-      const holder = document.getElementById('content-preview');
-      if(!holder) return;
-      holder.style.top = headerH + 'px';
-      holder.style.bottom = (footerMainH + footerSecH) + 'px';
-    }
-    window.addEventListener('load', sizeARViewport);
-    window.addEventListener('resize', sizeARViewport);
-    window.addEventListener('orientationchange', sizeARViewport);
   </script>
 </body>
 </html>
