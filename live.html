@@ -2,89 +2,79 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <!-- Stabiler Viewport auch im Portrait (Chrome iOS/Android) -->
-  <meta name="viewport"
-        content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Live – AR-Modus</title>
-
   <!-- =======================
-       Grundstyling (schlank)
+       Grundstyling
        ======================= -->
   <style>
-    :root{
-      /* Hintergrund transparent wie gewünscht */
-      --bg: transparent;
-      --text:#212121; --muted:#4b5563; --accent:#F39205; --border:#d0d0d0; --radius:0
-    }
+    :root{ --bg:#ffffff; --text:#212121; --muted:#4b5563; --accent:#F39205; --border:rgba(0,0,0,0.08); --radius:0 }
     *{ box-sizing:border-box }
-    /* Verhindert Text-Boosting/Autoscale, hält Höhen fest */
-    html{ height:100%; -webkit-text-size-adjust:100%; text-size-adjust:100% }
-    body{
-      height:100%; margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color:var(--text); background:var(--bg);
-      display:grid; grid-template-rows:auto 1fr auto; min-height:100svh; /* stabiler als 100vh/dvh */
-      overflow:hidden;
+    html,body{ height:100%; margin:0 }
+    body{ 
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; 
+      color:var(--text); 
+      background:var(--bg); 
+      display:grid; 
+      grid-template-rows:auto 1fr auto; 
+      min-height:100dvh; 
+      overflow:hidden 
     }
-
-    header{
-      text-align:center; position:sticky; top:0; z-index:10;
-      background:#fff; border-bottom:1px solid var(--border);
+    header{ 
+      text-align:center; 
+      position:sticky; 
+      top:0; 
+      z-index:10; 
+      background:#fff; 
+      border-bottom:1px solid #d0d0d0;
     }
-    .header-inner{
-      max-width:1200px; margin:0 auto; padding:16px 20px;
-      display:flex; align-items:center; justify-content:center; gap:18px
-    }
+    .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
     .site-title{ text-align:left; line-height:1.1 }
     .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
     .logo{ height:clamp(40px,4.3vw,60px); width:auto }
-
     main{ position:relative; min-height:0 }
-    /* Der AR-Container füllt main komplett; Höhe fixen wir unten per visualViewport */
     #content-preview{ position:absolute; inset:0; background:transparent }
-
-    /* A-Frame Szene & Canvas: immer 100% der Containerfläche, ohne Transform */
-    a-scene{
-      position:absolute !important; inset:0 !important;
-      width:100% !important; height:100% !important;
-      display:block; touch-action:none; background:transparent !important;
+    a-scene{ 
+      width:100%; 
+      height:100%; 
+      display:block; 
+      touch-action:none; 
+      background:transparent !important;
+      /* Entferne alle position/max-width/max-height Angaben! */
     }
-    a-scene canvas.a-canvas, a-scene .a-canvas{
-      position:absolute !important; inset:0 !important;
-      width:100% !important; height:100% !important;
-      display:block !important; transform:none !important;
+    footer{ 
+      position:sticky; 
+      bottom:0; 
+      z-index:10; 
+      background:#fff; 
+      border-top:1px solid #d0d0d0;
+      text-align:center 
     }
-
-    /* AR.js Video zuverlässig einpassen (Chrome neigt sonst zu Margins/Offests) */
-    #arjs-video, .arjs-video{
-      position:absolute !important; inset:0 !important;
-      width:100% !important; height:100% !important;
-      object-fit:cover !important; margin:0 !important; top:0 !important; left:0 !important;
-      transform:none !important; max-width:none !important; max-height:none !important;
-      z-index:-2 !important;
+    .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap }
+    .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer }
+    .footer-text{ font-size:clamp(15px,2.3vw,18px); color:var(--muted) }
+    .footer-secondary {
+      background: #fff;
+      border-top: 1px solid #d0d0d0;
+      border-bottom:1px solid #d0d0d0;
+      text-align: center;
+      font-size: 11px;
+      padding: 0;
     }
-
-    footer{
-      position:sticky; bottom:0; z-index:10; background:#fff;
-      border-top:1px solid var(--border); text-align:center
+    .footer-secondary-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5px 18px 5px 18px;
     }
-    .footer-inner{
-      max-width:1200px; margin:0 auto; padding:17px 22px;
-      display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap
+    .footer-lab {
+      color: #4b5563;
+      font-size: 11px;
+      font-weight: 400;
     }
-    .live-btn{
-      background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px;
-      font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer
+    .footer-lab strong {
+      font-weight: 500;
     }
-    .footer-secondary{
-      background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
-      text-align:center; font-size:11px; padding:0;
-    }
-    .footer-secondary-inner{ max-width:1200px; margin:0 auto; padding:5px 18px }
-    .footer-lab{ color:#4b5563; font-size:11px; font-weight:400 }
-    .footer-lab strong{ font-weight:500 }
   </style>
-
   <!-- =======================
        A-Frame + AR.js
        ======================= -->
@@ -93,127 +83,81 @@
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
-  <!-- Kopfzeile -->
-  <header>
-    <div class="header-inner">
-      <div class="site-title">
-        <div class="top">Technologiepark</div>
-        <div class="bottom">&amp; Studierendenzentrum</div>
+    <!-- ======================= Kopfzeile ======================= -->
+    <header>
+      <div class="header-inner">
+        <div class="site-title">
+          <div class="top">Technologiepark</div>
+          <div class="bottom">&amp; Studierendenzentrum</div>
+        </div>
+        <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
       </div>
-      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
-    </div>
-  </header>
+    </header>
 
-  <!-- Hauptbereich: AR-Szene -->
-  <main>
-    <div id="content-preview">
-      <a-scene
-        renderer="alpha:true; logarithmicDepthBuffer:true; pixelRatio:1"
-        embedded
-        loading-screen="enabled:false"
-        xr-mode-ui="enabled:false"
-        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
-        <a-assets>
-          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-        </a-assets>
-
-        <a-entity id="world-yaw" rotation="0 0 0">
-          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-            <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+    <!-- ======================= Hauptbereich: AR-Szene ======================= -->
+    <main>
+      <div id="content-preview">
+        <a-scene
+          renderer="logarithmicDepthBuffer: true; alpha: true;"
+          embedded
+          loading-screen="enabled: false;"
+          xr-mode-ui="enabled: false"
+          arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+          <a-assets>
+            <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+          </a-assets>
+          <a-entity id="world-yaw" rotation="0 0 0">
+            <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+              <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+            </a-entity>
           </a-entity>
-        </a-entity>
+          <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+        </a-scene>
+      </div>
+    </main>
 
-        <a-camera id="cam"
-                  gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;"
-                  rotation-reader></a-camera>
-      </a-scene>
-    </div>
-  </main>
+    <!-- ======================= Fußzeile ======================= -->
+    <footer>
+      <div class="footer-inner">
+        <button class="live-btn" id="backBtn">Zurück</button>
+        <button class="live-btn" id="gpsBtn">GPS ein</button>
+      </div>
+    </footer>
+    <footer class="footer-secondary">
+      <div class="footer-secondary-inner">
+        <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
+      </div>
+    </footer>
+    <script>
+      // Navigation zurück zur Startseite
+      document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
 
-  <!-- Fußzeile -->
-  <footer>
-    <div class="footer-inner">
-      <button class="live-btn" id="backBtn">Zurück</button>
-      <button class="live-btn" id="gpsBtn">GPS ein</button>
-    </div>
-  </footer>
-  <footer class="footer-secondary">
-    <div class="footer-secondary-inner">
-      <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
-    </div>
-  </footer>
+      // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
+      (function(){
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if(!isIOS) return;
+        const world = document.getElementById('world-yaw'); if(!world) return;
+        const OFFSETS = { 'portrait-primary':0, 'portrait-secondary':180, 'landscape-primary':90, 'landscape-secondary':-90 };
+        const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
+                      : (typeof window.orientation==='number' ? window.orientation : 0);
+        const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
+        function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
+        function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
+        apply(); window.addEventListener('orientationchange',apply);
+      })();
 
-  <!-- =======================
-       Interaktion & Fixes
-       ======================= -->
-  <script>
-    // Navigation zurück zur Startseite
-    document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
-
-    // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
-    (function(){
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      if(!isIOS) return;
-      const world = document.getElementById('world-yaw'); if(!world) return;
-      const OFFSETS = { 'portrait-primary':0, 'portrait-secondary':180, 'landscape-primary':90, 'landscape-secondary':-90 };
-      const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
-                    : (typeof window.orientation==='number' ? window.orientation : 0);
-      const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
-      function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
-      function apply(){ world.setAttribute('rotation',`0 ${OFFSETS[type()] ?? 0} 0`); }
-      apply(); window.addEventListener('orientationchange',apply,{passive:true});
-    })();
-
-    // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
-    const cam = document.getElementById('cam');
-    const gpsBtn = document.getElementById('gpsBtn');
-    let gpsOn = false;
-    function applyGPS(){
-      if(!cam) return;
-      if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS aus'; }
-      else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS ein'; }
-    }
-    gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
-    applyGPS();
-
-    // ========= Portrait-Stabilisierung =========
-    // 1) Content-Container exakt auf sichtbare Höhe setzen (verhindert "Hochskalieren")
-    (function(){
-      const wrap = document.getElementById('content-preview');
-      if(!wrap) return;
-      function fit(){
-        const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) || window.innerHeight;
-        // 'main' füllt Grid-Reihe 1fr; wir pinnen den AR-Container trotzdem auf die echte sichtbare Höhe.
-        wrap.style.height = vh + 'px';
+      // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
+      const cam = document.getElementById('cam');
+      const gpsBtn = document.getElementById('gpsBtn');
+      let gpsOn = false;
+      function applyGPS(){
+        if(!cam) return;
+        if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS aus'; }
+        else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS ein'; }
       }
-      fit();
-      window.addEventListener('resize', fit, {passive:true});
-      window.addEventListener('orientationchange', ()=>setTimeout(fit, 50), {passive:true});
-    })();
-
-    // 2) Renderer / Canvas nicht über-dimensionieren (DPR=1 + Size = Viewport)
-    (function(){
-      const scene = document.querySelector('a-scene');
-      function fixRenderer(){
-        if(!scene) return;
-        if(scene.renderer){
-          scene.renderer.setPixelRatio(1);
-          // Setze auf Fenstergröße – A-Frame passt intern ebenfalls an
-          scene.renderer.setSize(window.innerWidth, window.innerHeight, false);
-        }
-        if(scene.canvas){
-          const c = scene.canvas;
-          c.style.position='absolute'; c.style.inset='0';
-          c.style.width='100%'; c.style.height='100%'; c.style.transform='none';
-        }
-      }
-      if(scene){
-        if(scene.hasLoaded) fixRenderer(); else scene.addEventListener('loaded', fixRenderer);
-        window.addEventListener('resize', fixRenderer, {passive:true});
-        window.addEventListener('orientationchange', ()=>setTimeout(fixRenderer,50), {passive:true});
-      }
-    })();
-  </script>
-</body>
+      gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
+      applyGPS();
+    </script>
+  </body>
 </html>
