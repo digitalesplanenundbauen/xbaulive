@@ -1,38 +1,40 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <!-- A-Frame itself -->
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-    <!-- locar.js core -->
-    <script src="https://cdn.jsdelivr.net/npm/locar.js"></script>
-    <!-- locar.js A-Frame integration -->
-    <script src="https://cdn.jsdelivr.net/npm/locar.js/dist/locar-aframe.js"></script>
-  </head>
-  <body style="margin: 0; overflow: hidden;">
-    <a-scene
-      renderer="logarithmicDepthBuffer: true;"
-      embedded
-      loading-screen="enabled: false;"
-      vr-mode-ui="enabled: false"
-      xr-mode-ui="enabled: false"
-    >
-      <a-assets>
-        <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-      </a-assets>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-      <a-entity
-        locar-place='{"latitude":47.867615758,"longitude":12.109218307}'
-        gltf-model="#animated-asset"
-        scale="0.8 0.8 0.8"
-        position="-20 -4 -10">
-      </a-entity>
+      <!-- A-Frame itself -->
+<script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
 
-      <a-camera
-        locar-camera='{"simulateLatitude":47.866880722,"simulateLongitude":12.109128178}'
-        rotation-reader>
+<!-- Pure three.js code that the A-Frame components use for location-based AR -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js'></script>
+
+<!-- AR.js A-Frame components -->
+<script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js'></script>
+       
+    </head>
+
+    <body style="margin: 0; overflow: hidden;">
+        <a-scene
+            renderer="logarithmicDepthBuffer: true;"
+            embedded
+            loading-screen="enabled: false;"
+            arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;"
+        >
+            <a-assets>
+                <a-asset-item id="animated-asset" src="assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+            </a-assets>
+
+		 	<a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10">
+			</a-entity>
+
+
+<a-camera
+        gps-camera="simulateLatitude:  47.866880722; simulateLongitude: 12.109128178;"
+	    rotation-reader>
       </a-camera>
-    </a-scene>
+			        </a-scene>
+
   </body>
 </html>
