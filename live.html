@@ -2,71 +2,89 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Stabiler Viewport auch im Portrait (Chrome iOS/Android) -->
+  <meta name="viewport"
+        content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Live – AR-Modus</title>
+
   <!-- =======================
-       Grundstyling
+       Grundstyling (schlank)
        ======================= -->
   <style>
-    :root{ --bg:#ffffff; --text:#212121; --muted:#4b5563; --accent:#F39205; --border:rgba(0,0,0,0.08); --radius:0 }
-    *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0 }
-    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--text); background:var(--bg); display:grid; grid-template-rows:auto 1fr auto; min-height:100dvh; overflow:hidden }
-    header{ 
-      text-align:center; 
-      position:sticky; 
-      top:0; 
-      z-index:10; 
-      background:#fff; 
-      border-bottom:1px solid #d0d0d0; /* dünnere Linie wie in index.html */
+    :root{
+      /* Hintergrund transparent wie gewünscht */
+      --bg: transparent;
+      --text:#212121; --muted:#4b5563; --accent:#F39205; --border:#d0d0d0; --radius:0
     }
-    .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
+    *{ box-sizing:border-box }
+    /* Verhindert Text-Boosting/Autoscale, hält Höhen fest */
+    html{ height:100%; -webkit-text-size-adjust:100%; text-size-adjust:100% }
+    body{
+      height:100%; margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text); background:var(--bg);
+      display:grid; grid-template-rows:auto 1fr auto; min-height:100svh; /* stabiler als 100vh/dvh */
+      overflow:hidden;
+    }
+
+    header{
+      text-align:center; position:sticky; top:0; z-index:10;
+      background:#fff; border-bottom:1px solid var(--border);
+    }
+    .header-inner{
+      max-width:1200px; margin:0 auto; padding:16px 20px;
+      display:flex; align-items:center; justify-content:center; gap:18px
+    }
     .site-title{ text-align:left; line-height:1.1 }
     .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
     .logo{ height:clamp(40px,4.3vw,60px); width:auto }
+
     main{ position:relative; min-height:0 }
+    /* Der AR-Container füllt main komplett; Höhe fixen wir unten per visualViewport */
     #content-preview{ position:absolute; inset:0; background:transparent }
-    a-scene{ 
-      width:100%; 
-      height:100%; 
-      display:block; 
-      touch-action:none; 
-      background:transparent !important;
-      /* entferne position/max-width/max-height */
+
+    /* A-Frame Szene & Canvas: immer 100% der Containerfläche, ohne Transform */
+    a-scene{
+      position:absolute !important; inset:0 !important;
+      width:100% !important; height:100% !important;
+      display:block; touch-action:none; background:transparent !important;
     }
-    footer{ 
-      position:sticky; 
-      bottom:0; 
-      z-index:10; 
-      background:#fff; 
-      border-top:1px solid #d0d0d0; /* dünnere Linie wie in index.html */
-      text-align:center 
+    a-scene canvas.a-canvas, a-scene .a-canvas{
+      position:absolute !important; inset:0 !important;
+      width:100% !important; height:100% !important;
+      display:block !important; transform:none !important;
     }
-    .footer-inner{ max-width:1200px; margin:0 auto; padding:17px 22px; display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap }
-    .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer }
-    .footer-text{ font-size:clamp(15px,2.3vw,18px); color:var(--muted) }
-    .footer-secondary {
-      background: #fff;
-      border-top: 1px solid #d0d0d0;
-      border-bottom:1px solid #d0d0d0; /* dünnere untere Trennlinie */
-      text-align: center;
-      font-size: 11px;
-      padding: 0;
+
+    /* AR.js Video zuverlässig einpassen (Chrome neigt sonst zu Margins/Offests) */
+    #arjs-video, .arjs-video{
+      position:absolute !important; inset:0 !important;
+      width:100% !important; height:100% !important;
+      object-fit:cover !important; margin:0 !important; top:0 !important; left:0 !important;
+      transform:none !important; max-width:none !important; max-height:none !important;
+      z-index:-2 !important;
     }
-    .footer-secondary-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 5px 18px 5px 18px;
+
+    footer{
+      position:sticky; bottom:0; z-index:10; background:#fff;
+      border-top:1px solid var(--border); text-align:center
     }
-    .footer-lab {
-      color: #4b5563;
-      font-size: 11px;
-      font-weight: 400;
+    .footer-inner{
+      max-width:1200px; margin:0 auto; padding:17px 22px;
+      display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap
     }
-    .footer-lab strong {
-      font-weight: 500;
+    .live-btn{
+      background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px;
+      font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer
     }
+    .footer-secondary{
+      background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+      text-align:center; font-size:11px; padding:0;
+    }
+    .footer-secondary-inner{ max-width:1200px; margin:0 auto; padding:5px 18px }
+    .footer-lab{ color:#4b5563; font-size:11px; font-weight:400 }
+    .footer-lab strong{ font-weight:500 }
   </style>
+
   <!-- =======================
        A-Frame + AR.js
        ======================= -->
@@ -75,9 +93,7 @@
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
-  <!-- =======================
-       Kopfzeile
-       ======================= -->
+  <!-- Kopfzeile -->
   <header>
     <div class="header-inner">
       <div class="site-title">
@@ -88,36 +104,33 @@
     </div>
   </header>
 
-  <!-- =======================
-       Hauptbereich: AR-Szene
-       ======================= -->
+  <!-- Hauptbereich: AR-Szene -->
   <main>
     <div id="content-preview">
       <a-scene
-        renderer="logarithmicDepthBuffer: true; alpha: true;"
+        renderer="alpha:true; logarithmicDepthBuffer:true; pixelRatio:1"
         embedded
-        loading-screen="enabled: false;"
-        xr-mode-ui="enabled: false"
+        loading-screen="enabled:false"
+        xr-mode-ui="enabled:false"
         arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
-        <!-- GLB aus Assets (sauberes Preload) -->
         <a-assets>
           <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
         </a-assets>
-        <!-- Welt-Node + Geoposition -->
+
         <a-entity id="world-yaw" rotation="0 0 0">
           <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
             <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
           </a-entity>
         </a-entity>
-        <!-- Kamera (Simulation an / echtes GPS per Button) -->
-        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+
+        <a-camera id="cam"
+                  gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;"
+                  rotation-reader></a-camera>
       </a-scene>
     </div>
   </main>
 
-  <!-- =======================
-       Fußzeile
-       ======================= -->
+  <!-- Fußzeile -->
   <footer>
     <div class="footer-inner">
       <button class="live-btn" id="backBtn">Zurück</button>
@@ -131,7 +144,7 @@
   </footer>
 
   <!-- =======================
-       Interaktion & Funktion
+       Interaktion & Fixes
        ======================= -->
   <script>
     // Navigation zurück zur Startseite
@@ -148,8 +161,8 @@
                     : (typeof window.orientation==='number' ? window.orientation : 0);
       const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
       function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
-      function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
-      apply(); window.addEventListener('orientationchange',apply);
+      function apply(){ world.setAttribute('rotation',`0 ${OFFSETS[type()] ?? 0} 0`); }
+      apply(); window.addEventListener('orientationchange',apply,{passive:true});
     })();
 
     // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
@@ -163,6 +176,44 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
+
+    // ========= Portrait-Stabilisierung =========
+    // 1) Content-Container exakt auf sichtbare Höhe setzen (verhindert "Hochskalieren")
+    (function(){
+      const wrap = document.getElementById('content-preview');
+      if(!wrap) return;
+      function fit(){
+        const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) || window.innerHeight;
+        // 'main' füllt Grid-Reihe 1fr; wir pinnen den AR-Container trotzdem auf die echte sichtbare Höhe.
+        wrap.style.height = vh + 'px';
+      }
+      fit();
+      window.addEventListener('resize', fit, {passive:true});
+      window.addEventListener('orientationchange', ()=>setTimeout(fit, 50), {passive:true});
+    })();
+
+    // 2) Renderer / Canvas nicht über-dimensionieren (DPR=1 + Size = Viewport)
+    (function(){
+      const scene = document.querySelector('a-scene');
+      function fixRenderer(){
+        if(!scene) return;
+        if(scene.renderer){
+          scene.renderer.setPixelRatio(1);
+          // Setze auf Fenstergröße – A-Frame passt intern ebenfalls an
+          scene.renderer.setSize(window.innerWidth, window.innerHeight, false);
+        }
+        if(scene.canvas){
+          const c = scene.canvas;
+          c.style.position='absolute'; c.style.inset='0';
+          c.style.width='100%'; c.style.height='100%'; c.style.transform='none';
+        }
+      }
+      if(scene){
+        if(scene.hasLoaded) fixRenderer(); else scene.addEventListener('loaded', fixRenderer);
+        window.addEventListener('resize', fixRenderer, {passive:true});
+        window.addEventListener('orientationchange', ()=>setTimeout(fixRenderer,50), {passive:true});
+      }
+    })();
   </script>
 </body>
 </html>
