@@ -2,22 +2,34 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Verhindert Auto-Zoom / Font-Boosting in Chrome bei Orientation-Change -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Live – AR-Modus</title>
 
   <style>
     :root{
-      --bg:#ffffff; --text:#212121; --muted:#4b5563;
+      --bg: transparent;        /* Szene soll „durchscheinen“ */
+      --text:#212121; --muted:#4b5563;
       --accent:#F39205; --border:#d0d0d0; --radius:0
     }
-    *{ box-sizing:border-box; margin:0; padding:0 }
-    html,body{ height:100%; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    *{ box-sizing:border-box }
+    html{
+      height:100%;
+      /* Verhindert Schrift-/Seiten-Zoom in Chrome/Safari bei Landscape */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    body{
+      height:100%; margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text); background:var(--bg);   /* <- wieder transparent */
+    }
 
-    /* Szene belegt den kompletten Viewport (wie im funktionierenden Beispiel) */
+    /* Szene füllt Viewport (robust wie im funktionierenden Beispiel) */
     .scene-wrap{
-      position:fixed; inset:0;   /* volle Fläche */
-      overflow:hidden;           /* falls Video „übersteht“ */
-      z-index:1;                 /* unter Header/Footer */
+      position:fixed; inset:0;
+      overflow:hidden;
+      z-index:1;
       background:transparent;
     }
     a-scene{
@@ -49,17 +61,11 @@
     header, .footer-main, .footer-secondary{
       position:fixed; left:0; right:0;
       background:#fff; z-index:10;
+      /* Wenn du sie halbtransparent willst: background: rgba(255,255,255,0.9); */
     }
-    header{
-      top:0; border-bottom:1px solid var(--border);
-    }
-    .footer-main{
-      bottom:22px; /* Abstand zur Sekundär-Fußzeile */
-      border-top:1px solid var(--border);
-    }
-    .footer-secondary{
-      bottom:0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);
-    }
+    header{ top:0; border-bottom:1px solid var(--border) }
+    .footer-main{ bottom:22px; border-top:1px solid var(--border) }
+    .footer-secondary{ bottom:0; border-top:1px solid var(--border); border-bottom:1px solid var(--border) }
 
     .header-inner, .footer-inner, .footer-secondary-inner{
       max-width:1200px; margin:0 auto;
@@ -134,7 +140,7 @@
   </div>
 
   <script>
-    // Navigation zurück zur Startseite
+    // Zurück zur Startseite
     document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
 
     // iOS-Orientierungsfix
