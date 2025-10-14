@@ -184,6 +184,45 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
+
+    // --- Workaround: Canvas-Größe nach jedem Resize/Orientation-Change explizit setzen ---
+    function fixARCanvasSize() {
+      var scene = document.querySelector('a-scene');
+      var canvas = scene && scene.canvas;
+      // Versuche, die tatsächliche Viewportgröße zu erzwingen
+      var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+      var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
+      // Firefox-Bugfix: Vertausche Breite/Höhe im Hochformat, wenn das Bild verdreht ist
+      var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+      var isPortrait = w < h;
+      if (isFirefox && isPortrait) {
+        // In Firefox Hochformat: Breite/Höhe tauschen (Workaround für 90°-Drehung)
+        var tmp = w; w = h; h = tmp;
+      }
+
+      if (scene) {
+        scene.style.width = w + 'px';
+        scene.style.height = h + 'px';
+      }
+      if (canvas) {
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+      }
+    }
+    window.addEventListener('orientationchange', function() {
+      setTimeout(fixARCanvasSize, 300); // Verzögerung, damit Browser-UI fertig ist
+    });
+    window.addEventListener('resize', fixARCanvasSize);
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(fixARCanvasSize, 500);
+    });
+
+    // --- Chrome-Bug: Verhindere initiales "Zoom-In" nach kurzer Zeit ---
+    // Wiederhole das Setzen der Größe mehrfach in den ersten Sekunden
+    for (let i = 1; i <= 10; ++i) {
+      setTimeout(fixARCanvasSize, i * 300);
+    }
   </script>
 </body>
 </html>
