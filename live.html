@@ -32,7 +32,19 @@
       display:block; 
       touch-action:none; 
       background:transparent !important;
-      /* entferne position/max-width/max-height */
+    }
+    /* AR.js Video-Stream Fix - kritisch für korrekte Darstellung */
+    #arjs-video {
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      object-fit: cover !important;
+      z-index: -2 !important;
     }
     footer{ 
       position:sticky; 
@@ -94,11 +106,11 @@
   <main>
     <div id="content-preview">
       <a-scene
-        renderer="logarithmicDepthBuffer: true; alpha: true;"
+        renderer="logarithmicDepthBuffer: true; alpha: true; precision: medium;"
         embedded
         loading-screen="enabled: false;"
         xr-mode-ui="enabled: false"
-        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+        arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;">
         <!-- GLB aus Assets (sauberes Preload) -->
         <a-assets>
           <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
@@ -110,7 +122,7 @@
           </a-entity>
         </a-entity>
         <!-- Kamera (Simulation an / echtes GPS per Button) -->
-        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178; gpsMinDistance: 5;" rotation-reader></a-camera>
       </a-scene>
     </div>
   </main>
@@ -160,69 +172,125 @@
     // Navigation zurück zur Startseite
     document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
 
+    // AR.js Video-Constraint-Override - behebt Skalierungsprobleme
+    (function fixARJSVideo() {
+      const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      
+      navigator.mediaDevices.getUserMedia = function(constraints) {
+        // Optimierte Video-Constraints für mobile Geräte
+        if (constraints && constraints.video) {
+          const isLandscape = window.innerWidth > window.innerHeight;
+          
+          constraints.video = {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: isLandscape ? 1280 : 720 },
+            height: { ideal: isLandscape ? 720 : 1280 },
+            aspectRatio: { ideal: window.innerWidth / window.innerHeight }
+          };
+        }
+        
+        return originalGetUserMedia(constraints);
+      };
+    })();
 
-    // Rotation (Orientation-Change) unterbinden: Lock auf Portrait
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock('portrait').catch(function(){});
-    }
-    // Fallback für iOS/Safari: Scroll/Resize verhindern
-    window.addEventListener('orientationchange', function(e) {
-      if (window.screen.orientation && window.screen.orientation.type.indexOf('portrait') === -1) {
-        // Optional: Zeige Hinweis oder reload
-        // location.reload();
+    // Erweiterte Orientierungs-Behandlung für alle Geräte
+    (function handleOrientation() {
+      const world = document.getElementById('world-yaw'); 
+      if (!world) return;
+      
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      const isFirefox = /Firefox/.test(navigator.userAgent);
+      
+      function getRotation() {
+        const angle = screen.orientation?.angle ?? window.orientation ?? 0;
+        const normalized = ((angle % 360) + 360) % 360;
+        
+        // Firefox braucht invertierte Rotation im Landscape
+        if (isFirefox && (normalized === 90 || normalized === 270)) {
+          return normalized === 90 ? -90 : 90;
+        }
+        
+        // Android Standard-Rotationen
+        if (isAndroid) {
+          if (normalized === 0) return 0;
+          if (normalized === 90) return -90;
+          if (normalized === 180) return 180;
+          if (normalized === 270) return 90;
+        }
+        
+        // iOS Standard-Rotationen
+        if (normalized === 90) return 90;
+        if (normalized === 270) return -90;
+        if (normalized === 180) return 180;
+        
+        return 0;
       }
-    });
+      
+      function applyRotation() {
+        const rotation = getRotation();
+        world.setAttribute('rotation', `0 ${rotation} 0`);
+        
+        // Video-Element nachträglich korrigieren
+        setTimeout(() => {
+          const video = document.getElementById('arjs-video');
+          if (video) {
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.maxWidth = '100vw';
+            video.style.maxHeight = '100vh';
+            video.style.objectFit = 'cover';
+            video.style.position = 'absolute';
+            video.style.top = '50%';
+            video.style.left = '50%';
+            video.style.transform = 'translate(-50%, -50%)';
+          }
+        }, 100);
+      }
+      
+      applyRotation();
+      window.addEventListener('orientationchange', () => setTimeout(applyRotation, 100));
+      screen.orientation?.addEventListener('change', applyRotation);
+    })();
 
-    // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
+    // GPS-Toggle mit verbesserter Konfiguration
     const cam = document.getElementById('cam');
     const gpsBtn = document.getElementById('gpsBtn');
     let gpsOn = false;
-    function applyGPS(){
-      if(!cam) return;
-      if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS aus'; }
-      else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS ein'; }
+    
+    function applyGPS() {
+      if (!cam) return;
+      if (gpsOn) { 
+        cam.setAttribute('gps-camera', 'minAccuracy: 50; gpsMinDistance: 5'); 
+        gpsBtn.textContent = 'GPS aus'; 
+      } else { 
+        cam.setAttribute('gps-camera', 'simulateLatitude: 47.866880722; simulateLongitude: 12.109128178; gpsMinDistance: 5'); 
+        gpsBtn.textContent = 'GPS ein'; 
+      }
     }
-    gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
+    
+    gpsBtn?.addEventListener('click', () => { gpsOn = !gpsOn; applyGPS(); });
     applyGPS();
 
-    // --- Workaround: Canvas-Größe nach jedem Resize/Orientation-Change explizit setzen ---
-    function fixARCanvasSize() {
-      var scene = document.querySelector('a-scene');
-      var canvas = scene && scene.canvas;
-      // Versuche, die tatsächliche Viewportgröße zu erzwingen
-      var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-      var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-
-      // Firefox-Bugfix: Vertausche Breite/Höhe im Hochformat, wenn das Bild verdreht ist
-      var isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-      var isPortrait = w < h;
-      if (isFirefox && isPortrait) {
-        // In Firefox Hochformat: Breite/Höhe tauschen (Workaround für 90°-Drehung)
-        var tmp = w; w = h; h = tmp;
-      }
-
-      if (scene) {
-        scene.style.width = w + 'px';
-        scene.style.height = h + 'px';
-      }
-      if (canvas) {
-        canvas.style.width = w + 'px';
-        canvas.style.height = h + 'px';
-      }
-    }
-    window.addEventListener('orientationchange', function() {
-      setTimeout(fixARCanvasSize, 300); // Verzögerung, damit Browser-UI fertig ist
+    // Critical: Video-Fix nach Szenen-Laden
+    document.querySelector('a-scene')?.addEventListener('loaded', () => {
+      setTimeout(() => {
+        const video = document.getElementById('arjs-video');
+        if (video) {
+          video.style.width = '100%';
+          video.style.height = '100%';
+          video.style.maxWidth = '100vw';
+          video.style.maxHeight = '100vh';
+          video.style.objectFit = 'cover';
+          video.style.position = 'absolute';
+          video.style.top = '50%';
+          video.style.left = '50%';
+          video.style.transform = 'translate(-50%, -50%)';
+          video.style.zIndex = '-2';
+        }
+      }, 500);
     });
-    window.addEventListener('resize', fixARCanvasSize);
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(fixARCanvasSize, 500);
-    });
-
-    // --- Chrome-Bug: Verhindere initiales "Zoom-In" nach kurzer Zeit ---
-    // Wiederhole das Setzen der Größe mehrfach in den ersten Sekunden
-    for (let i = 1; i <= 10; ++i) {
-      setTimeout(fixARCanvasSize, i * 300);
-    }
   </script>
 </body>
 </html>
