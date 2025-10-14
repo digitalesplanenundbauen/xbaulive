@@ -101,7 +101,7 @@
   <footer>
     <div class="footer-inner">
       <button class="live-btn" id="backBtn">Zurück</button>
-      <button class="live-btn" id="gpsBtn">GPS ein</button>
+      <button class="live-btn" id="gpsBtn">GPS aktivieren</button>
     </div>
   </footer>
 
@@ -133,8 +133,8 @@
     let gpsOn = false;
     function applyGPS(){
       if(!cam) return;
-      if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS aus'; }
-      else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS ein'; }
+      if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS deaktivieren'; }
+      else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS aktivieren'; }
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
