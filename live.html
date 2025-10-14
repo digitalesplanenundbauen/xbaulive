@@ -10,57 +10,48 @@
   <style>
     :root{ --bg:#ffffff; --text:#212121; --muted:#4b5563; --accent:#F39205; --border:rgba(0,0,0,0.08); --radius:0 }
     *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0; }
-    body{ 
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; 
-      color:var(--text); 
-      background:var(--bg); 
-      min-height:100dvh; 
-      overflow:hidden;
-    }
-    a-scene{ 
-      width:100vw; 
-      height:100dvh; 
-      display:block; 
-      touch-action:none; 
-      background:transparent !important;
-      position:fixed;
-      left:0; top:0; z-index:0;
-      pointer-events:auto;
-    }
+    html,body{ height:100%; margin:0 }
+    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--text); background:var(--bg); display:grid; grid-template-rows:auto 1fr auto; min-height:100dvh; overflow:hidden }
     header{ 
+      text-align:center; 
+      position:sticky; 
+      top:0; 
+      z-index:10; 
       background:#fff; 
-      border-bottom:1px solid #d0d0d0;
-      text-align:center;
-      position:fixed;
-      top:0; left:0; right:0;
-      z-index:10;
+      border-bottom:1px solid #d0d0d0; /* dünnere Linie wie in index.html */
     }
     .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
     .site-title{ text-align:left; line-height:1.1 }
     .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
     .logo{ height:clamp(40px,4.3vw,60px); width:auto }
-    footer{ 
-      background:#fff; 
-      border-top:1px solid #d0d0d0;
-      text-align:center;
-      position:fixed;
-      left:0; right:0;
-      z-index:10;
+    main{ position:relative; min-height:0 }
+    #content-preview{ position:absolute; inset:0; background:transparent }
+    a-scene{ 
+      width:100%; 
+      height:100%; 
+      display:block; 
+      touch-action:none; 
+      background:transparent !important;
+      /* entferne position/max-width/max-height */
     }
-    .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap }
+    footer{ 
+      position:sticky; 
+      bottom:0; 
+      z-index:10; 
+      background:#fff; 
+      border-top:1px solid #d0d0d0; /* dünnere Linie wie in index.html */
+      text-align:center 
+    }
+    .footer-inner{ max-width:1200px; margin:0 auto; padding:17px 22px; display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap }
     .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer }
     .footer-text{ font-size:clamp(15px,2.3vw,18px); color:var(--muted) }
     .footer-secondary {
       background: #fff;
       border-top: 1px solid #d0d0d0;
-      border-bottom:1px solid #d0d0d0;
+      border-bottom: 1px solid #d0d0d0; /* dünnere untere Trennlinie */
       text-align: center;
       font-size: 11px;
       padding: 0;
-      position:fixed;
-      left:0; right:0;
-      z-index:10;
     }
     .footer-secondary-inner {
       max-width: 1200px;
@@ -75,13 +66,6 @@
     .footer-lab strong {
       font-weight: 500;
     }
-    /* Positionierung der Fußzeilen */
-    footer.footer-secondary { bottom: 0; }
-    footer:not(.footer-secondary) { bottom: 32px; }
-    @media (max-width: 600px) {
-      footer:not(.footer-secondary) { bottom: 36px; }
-      .footer-secondary-inner { padding: 5px 8px; }
-    }
   </style>
   <!-- =======================
        A-Frame + AR.js
@@ -91,24 +75,9 @@
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
-  <a-scene
-    renderer="logarithmicDepthBuffer: true; alpha: true;"
-    embedded
-    loading-screen="enabled: false;"
-    xr-mode-ui="enabled: false"
-    arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
-    <a-assets>
-      <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-    </a-assets>
-    <a-entity id="world-yaw" rotation="0 0 0">
-      <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-        <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
-      </a-entity>
-    </a-entity>
-    <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
-  </a-scene>
-
-  <!-- ======================= Kopfzeile ======================= -->
+  <!-- =======================
+       Kopfzeile
+       ======================= -->
   <header>
     <div class="header-inner">
       <div class="site-title">
@@ -119,7 +88,36 @@
     </div>
   </header>
 
-  <!-- ======================= Fußzeile ======================= -->
+  <!-- =======================
+       Hauptbereich: AR-Szene
+       ======================= -->
+  <main>
+    <div id="content-preview">
+      <a-scene
+        renderer="logarithmicDepthBuffer: true; alpha: true;"
+        embedded
+        loading-screen="enabled: false;"
+        xr-mode-ui="enabled: false"
+        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+        <!-- GLB aus Assets (sauberes Preload) -->
+        <a-assets>
+          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        </a-assets>
+        <!-- Welt-Node + Geoposition -->
+        <a-entity id="world-yaw" rotation="0 0 0">
+          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+            <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+          </a-entity>
+        </a-entity>
+        <!-- Kamera (Simulation an / echtes GPS per Button) -->
+        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      </a-scene>
+    </div>
+  </main>
+
+  <!-- =======================
+       Fußzeile
+       ======================= -->
   <footer>
     <div class="footer-inner">
       <button class="live-btn" id="backBtn">Zurück</button>
@@ -131,6 +129,33 @@
       <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
     </div>
   </footer>
+  <style>
+    .footer-secondary {
+      background: #fff;
+      border-top: 1px solid #d0d0d0;
+      border-bottom: 1px solid #d0d0d0; /* dünnere untere Trennlinie */
+      text-align: center;
+      font-size: 11px;
+      padding: 0;
+    }
+    .footer-secondary-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5px 18px 5px 18px;
+    }
+    .footer-lab {
+      color: #4b5563;
+      font-size: 11px;
+      font-weight: 400;
+    }
+    .footer-lab strong {
+      font-weight: 500;
+    }
+  </style>
+
+  <!-- =======================
+       Interaktion & Funktion
+       ======================= -->
   <script>
     // Navigation zurück zur Startseite
     document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
@@ -143,7 +168,7 @@
       const world = document.getElementById('world-yaw'); if(!world) return;
       const OFFSETS = { 'portrait-primary':0, 'portrait-secondary':180, 'landscape-primary':90, 'landscape-secondary':-90 };
       const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
-                        : (typeof window.orientation==='number' ? window.orientation : 0);
+                    : (typeof window.orientation==='number' ? window.orientation : 0);
       const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
       function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
       function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
