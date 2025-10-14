@@ -36,6 +36,18 @@
       </a-camera>
 			        </a-scene>
 
- 
-    </body>
+    <script>
+      function resizeScene() {
+        var scene = document.querySelector('a-scene');
+        if (scene) {
+          scene.style.width = window.innerWidth + 'px';
+          scene.style.height = window.innerHeight + 'px';
+        }
+      }
+      window.addEventListener('orientationchange', resizeScene);
+      window.addEventListener('resize', resizeScene);
+      // Initial call
+      resizeScene();
+    </script>
+  </body>
 </html>
