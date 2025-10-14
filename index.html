@@ -181,6 +181,62 @@
 
     // Navigation zur Live-Ansicht
     document.getElementById('liveBtn')?.addEventListener('click', ()=>{ location.href = 'live.html'; });
+
+    // --- iOS-Orientierungsfix wie in test-fix ---
+    (function () {
+      const isIOS =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (!isIOS) return;
+
+      const world = document.getElementById('model')?.parentElement?.parentElement; // Passe ggf. an, falls id anders
+      if (!world) return;
+
+      const OFFSETS = {
+        'portrait-primary':   0,
+        'portrait-secondary': 180,
+        'landscape-primary':  90,
+        'landscape-secondary':-90
+      };
+
+      function getScreenAngle() {
+        if (screen.orientation && typeof screen.orientation.angle === 'number') {
+          return screen.orientation.angle;
+        }
+        if (typeof window.orientation === 'number') {
+          return window.orientation;
+        }
+        return 0;
+      }
+
+      function normalizeAngle(a) {
+        a = ((a % 360) + 360) % 360;
+        if (a > 180) a -= 360;
+        return a;
+      }
+
+      function getOrientationType() {
+        if (screen.orientation && screen.orientation.type) {
+          return screen.orientation.type;
+        }
+        const ang = normalizeAngle(getScreenAngle());
+        if (ang === 0)   return 'portrait-primary';
+        if (ang === 180 || ang === -180) return 'portrait-secondary';
+        if (ang === 90)  return 'landscape-primary';
+        if (ang === -90) return 'landscape-secondary';
+        return 'portrait-primary';
+      }
+
+      function applyOrientationFix() {
+        const type = getOrientationType();
+        const yawFix = OFFSETS[type] ?? 0;
+        world.setAttribute('rotation', `0 ${yawFix} 0`);
+      }
+
+      applyOrientationFix();
+      window.addEventListener('orientationchange', applyOrientationFix);
+      // window.addEventListener('resize', applyOrientationFix); // optional wie in test-fix
+    })();
   </script>
 </body>
 </html>
