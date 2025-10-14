@@ -160,8 +160,18 @@
     // Navigation zurück zur Startseite
     document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
 
-    // iOS-Orientierungsfix (wie in test-fix.html)
-  
+
+    // Rotation (Orientation-Change) unterbinden: Lock auf Portrait
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('portrait').catch(function(){});
+    }
+    // Fallback für iOS/Safari: Scroll/Resize verhindern
+    window.addEventListener('orientationchange', function(e) {
+      if (window.screen.orientation && window.screen.orientation.type.indexOf('portrait') === -1) {
+        // Optional: Zeige Hinweis oder reload
+        // location.reload();
+      }
+    });
 
     // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
     const cam = document.getElementById('cam');
