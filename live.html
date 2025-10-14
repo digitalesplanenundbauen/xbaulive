@@ -10,45 +10,43 @@
   <style>
     :root{ --bg:#ffffff; --text:#212121; --muted:#4b5563; --accent:#F39205; --border:rgba(0,0,0,0.08); --radius:0 }
     *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0 }
+    html,body{ height:100%; margin:0; }
     body{ 
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; 
       color:var(--text); 
       background:var(--bg); 
-      display:grid; 
-      grid-template-rows:auto 1fr auto; 
       min-height:100dvh; 
-      overflow:hidden 
+      overflow:hidden;
+    }
+    a-scene{ 
+      width:100vw; 
+      height:100dvh; 
+      display:block; 
+      touch-action:none; 
+      background:transparent !important;
+      position:fixed;
+      left:0; top:0; z-index:0;
+      pointer-events:auto;
     }
     header{ 
-      text-align:center; 
-      position:sticky; 
-      top:0; 
-      z-index:10; 
       background:#fff; 
       border-bottom:1px solid #d0d0d0;
+      text-align:center;
+      position:fixed;
+      top:0; left:0; right:0;
+      z-index:10;
     }
     .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
     .site-title{ text-align:left; line-height:1.1 }
     .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
     .logo{ height:clamp(40px,4.3vw,60px); width:auto }
-    main{ position:relative; min-height:0 }
-    #content-preview{ position:absolute; inset:0; background:transparent }
-    a-scene{ 
-      width:100%; 
-      height:100%; 
-      display:block; 
-      touch-action:none; 
-      background:transparent !important;
-      /* Entferne alle position/max-width/max-height Angaben! */
-    }
     footer{ 
-      position:sticky; 
-      bottom:0; 
-      z-index:10; 
       background:#fff; 
       border-top:1px solid #d0d0d0;
-      text-align:center 
+      text-align:center;
+      position:fixed;
+      left:0; right:0;
+      z-index:10;
     }
     .footer-inner{ max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap }
     .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer }
@@ -60,6 +58,9 @@
       text-align: center;
       font-size: 11px;
       padding: 0;
+      position:fixed;
+      left:0; right:0;
+      z-index:10;
     }
     .footer-secondary-inner {
       max-width: 1200px;
@@ -74,6 +75,13 @@
     .footer-lab strong {
       font-weight: 500;
     }
+    /* Positionierung der Fußzeilen */
+    footer.footer-secondary { bottom: 0; }
+    footer:not(.footer-secondary) { bottom: 32px; }
+    @media (max-width: 600px) {
+      footer:not(.footer-secondary) { bottom: 36px; }
+      .footer-secondary-inner { padding: 5px 8px; }
+    }
   </style>
   <!-- =======================
        A-Frame + AR.js
@@ -83,81 +91,76 @@
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
-    <!-- ======================= Kopfzeile ======================= -->
-    <header>
-      <div class="header-inner">
-        <div class="site-title">
-          <div class="top">Technologiepark</div>
-          <div class="bottom">&amp; Studierendenzentrum</div>
-        </div>
-        <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
-      </div>
-    </header>
+  <a-scene
+    renderer="logarithmicDepthBuffer: true; alpha: true;"
+    embedded
+    loading-screen="enabled: false;"
+    xr-mode-ui="enabled: false"
+    arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+    <a-assets>
+      <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+    </a-assets>
+    <a-entity id="world-yaw" rotation="0 0 0">
+      <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+        <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+      </a-entity>
+    </a-entity>
+    <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+  </a-scene>
 
-    <!-- ======================= Hauptbereich: AR-Szene ======================= -->
-    <main>
-      <div id="content-preview">
-        <a-scene
-          renderer="logarithmicDepthBuffer: true; alpha: true;"
-          embedded
-          loading-screen="enabled: false;"
-          xr-mode-ui="enabled: false"
-          arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
-          <a-assets>
-            <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
-          </a-assets>
-          <a-entity id="world-yaw" rotation="0 0 0">
-            <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-              <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
-            </a-entity>
-          </a-entity>
-          <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
-        </a-scene>
+  <!-- ======================= Kopfzeile ======================= -->
+  <header>
+    <div class="header-inner">
+      <div class="site-title">
+        <div class="top">Technologiepark</div>
+        <div class="bottom">&amp; Studierendenzentrum</div>
       </div>
-    </main>
+      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
+    </div>
+  </header>
 
-    <!-- ======================= Fußzeile ======================= -->
-    <footer>
-      <div class="footer-inner">
-        <button class="live-btn" id="backBtn">Zurück</button>
-        <button class="live-btn" id="gpsBtn">GPS ein</button>
-      </div>
-    </footer>
-    <footer class="footer-secondary">
-      <div class="footer-secondary-inner">
-        <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
-      </div>
-    </footer>
-    <script>
-      // Navigation zurück zur Startseite
-      document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
+  <!-- ======================= Fußzeile ======================= -->
+  <footer>
+    <div class="footer-inner">
+      <button class="live-btn" id="backBtn">Zurück</button>
+      <button class="live-btn" id="gpsBtn">GPS ein</button>
+    </div>
+  </footer>
+  <footer class="footer-secondary">
+    <div class="footer-secondary-inner">
+      <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
+    </div>
+  </footer>
+  <script>
+    // Navigation zurück zur Startseite
+    document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
 
-      // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
-      (function(){
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if(!isIOS) return;
-        const world = document.getElementById('world-yaw'); if(!world) return;
-        const OFFSETS = { 'portrait-primary':0, 'portrait-secondary':180, 'landscape-primary':90, 'landscape-secondary':-90 };
-        const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
-                      : (typeof window.orientation==='number' ? window.orientation : 0);
-        const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
-        function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
-        function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
-        apply(); window.addEventListener('orientationchange',apply);
-      })();
+    // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
+    (function(){
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if(!isIOS) return;
+      const world = document.getElementById('world-yaw'); if(!world) return;
+      const OFFSETS = { 'portrait-primary':0, 'portrait-secondary':180, 'landscape-primary':90, 'landscape-secondary':-90 };
+      const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
+                        : (typeof window.orientation==='number' ? window.orientation : 0);
+      const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
+      function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
+      function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
+      apply(); window.addEventListener('orientationchange',apply);
+    })();
 
-      // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
-      const cam = document.getElementById('cam');
-      const gpsBtn = document.getElementById('gpsBtn');
-      let gpsOn = false;
-      function applyGPS(){
-        if(!cam) return;
-        if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS aus'; }
-        else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS ein'; }
-      }
-      gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
-      applyGPS();
-    </script>
-  </body>
+    // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
+    const cam = document.getElementById('cam');
+    const gpsBtn = document.getElementById('gpsBtn');
+    let gpsOn = false;
+    function applyGPS(){
+      if(!cam) return;
+      if(gpsOn){ cam.setAttribute('gps-camera','minAccuracy: 50'); gpsBtn.textContent='GPS aus'; }
+      else     { cam.setAttribute('gps-camera','simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;'); gpsBtn.textContent='GPS ein'; }
+    }
+    gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
+    applyGPS();
+  </script>
+</body>
 </html>
