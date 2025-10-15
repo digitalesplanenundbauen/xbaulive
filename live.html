@@ -305,7 +305,11 @@
     // ...existing code (GPS Toggle bleibt unverändert)...
     // ========= AR.js Diagnose & Patches (aktivierbar mit ?debug=1) =========
     (function(){
+      const params = new URLSearchParams(location.search);
       const DEBUG = /(?:\?|&)debug=1(?:&|$)/.test(location.search);
+      const FORCE_ROT_DEG = params.has('vfix') ? (parseFloat(params.get('vfix')||'0') || 0) : null; // z.B. 90, -90, 0
+      const FORCE_SCALE = params.has('vscale') ? (parseFloat(params.get('vscale')||'1') || 1) : null;
+
       const isFF = /Firefox/i.test(navigator.userAgent);
       const $overlay = document.getElementById('ar-debug');
       if (DEBUG && $overlay) $overlay.style.display = 'block';
@@ -336,6 +340,19 @@ world-yaw: ${state.lastWorldY ?? 'n/a'}
 video transform: rotate(${state.lastRotate}) scale(${state.lastScale})
 notes: ${state.notes.join(' | ')}`;
         state.notes = [];
+
+        // Zusätzlich in die Konsole loggen (nur Debug)
+        if (DEBUG) {
+          console.debug('[ARDBG]', {
+            ua: navigator.userAgent,
+            win: `${innerWidth}x${innerHeight}`,
+            dpr: devicePixelRatio,
+            video: (function(){ const v=document.getElementById('arjs-video'); return v?`${v.videoWidth}x${v.videoHeight}`:'0x0'; })(),
+            worldYaw: state.lastWorldY,
+            transform: { rotate: state.lastRotate, scale: state.lastScale },
+            notes: state.notes.slice(0)
+          });
+        }
       }
 
       function waitForVideo(cb, tries=0) {
@@ -364,19 +381,27 @@ notes: ${state.notes.join(' | ')}`;
 
         // Reset
         let rotate = 'none', scale = '1';
-        // Nur drehen wenn Heuristik klaren Mismatch findet (meist Firefox in Landscape)
-        if (isFF && vw && vh) {
-          if (windowIsLandscape && !videoIsLandscape) {
-            rotate = '90deg';
-          } else if (!windowIsLandscape && videoIsLandscape) {
-            rotate = '-90deg';
-          }
-        }
 
-        // Kleine Skalierung, um mögliche Ränder zu vermeiden, nur wenn rotiert
-        if (rotate !== 'none') {
-          // grobe Heuristik, wird im Overlay protokolliert
-          scale = '1.15';
+        // Forced test via URL parameters has highest priority
+        if (FORCE_ROT_DEG !== null) {
+          rotate = `${FORCE_ROT_DEG}deg`;
+          if (FORCE_SCALE !== null) scale = `${FORCE_SCALE}`;
+          state.notes.push(`force vfix=${FORCE_ROT_DEG} vscale=${FORCE_SCALE ?? '1'}`);
+        } else {
+          // ...existing heuristic for Firefox...
+          const vw = v.videoWidth, vh = v.videoHeight;
+          const winW = innerWidth, winH = innerHeight;
+          const windowIsLandscape = winW > winH;
+          const videoIsLandscape = vw > vh;
+
+          if (isFF && vw && vh) {
+            if (windowIsLandscape && !videoIsLandscape) {
+              rotate = '90deg';
+            } else if (!windowIsLandscape && videoIsLandscape) {
+              rotate = '-90deg';
+            }
+          }
+          if (rotate !== 'none') scale = '1.15';
         }
 
         v.style.transform = `rotate(${rotate}) scale(${scale})`;
