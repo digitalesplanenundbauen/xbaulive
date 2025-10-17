@@ -73,6 +73,68 @@
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+  <script>
+    // PATCH: Überschreibe das Resize-Verhalten von A-Frame/AR.js, damit devicePixelRatio ignoriert wird
+    function forceViewportSize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // Canvas
+      document.querySelectorAll('canvas.a-canvas').forEach(c => {
+        c.width = w;
+        c.height = h;
+        c.style.width = w + 'px';
+        c.style.height = h + 'px';
+        c.style.left = '0';
+        c.style.top = '0';
+        c.style.position = 'absolute';
+      });
+      // Video
+      const v = document.getElementById('arjs-video');
+      if (v) {
+        v.width = w;
+        v.height = h;
+        v.style.width = w + 'px';
+        v.style.height = h + 'px';
+        v.style.left = '0';
+        v.style.top = '0';
+        v.style.position = 'absolute';
+        v.style.margin = '0';
+      }
+      // Body
+      document.body.style.width = w + 'px';
+      document.body.style.height = h + 'px';
+      document.body.style.margin = '0';
+    }
+
+    // Hook in A-Frame/AR.js resize events
+    function patchResize() {
+      // Patch AFRAME's internal resize method if present
+      if (window.AFRAME && AFRAME.scenes && AFRAME.scenes.length) {
+        AFRAME.scenes.forEach(scene => {
+          if (scene.renderer && scene.renderer.setSize) {
+            const origSetSize = scene.renderer.setSize.bind(scene.renderer);
+            scene.renderer.setSize = function(width, height, updateStyle) {
+              // always use viewport size
+              origSetSize(window.innerWidth, window.innerHeight, true);
+              forceViewportSize();
+            };
+          }
+        });
+      }
+      forceViewportSize();
+    }
+
+    window.addEventListener('resize', () => setTimeout(forceViewportSize, 50));
+    window.addEventListener('orientationchange', () => setTimeout(forceViewportSize, 100));
+    window.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+      forceViewportSize();
+      patchResize();
+    }, 200));
+    setTimeout(() => {
+      forceViewportSize();
+      patchResize();
+    }, 400);
+  </script>
 </head>
 <body>
   <!-- =======================
