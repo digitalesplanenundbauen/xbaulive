@@ -72,69 +72,7 @@
        ======================= -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
-  <script>
-    // PATCH: Überschreibe das Resize-Verhalten von A-Frame/AR.js, damit devicePixelRatio ignoriert wird
-    function forceViewportSize() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      // Canvas
-      document.querySelectorAll('canvas.a-canvas').forEach(c => {
-        c.width = w;
-        c.height = h;
-        c.style.width = w + 'px';
-        c.style.height = h + 'px';
-        c.style.left = '0';
-        c.style.top = '0';
-        c.style.position = 'absolute';
-      });
-      // Video
-      const v = document.getElementById('arjs-video');
-      if (v) {
-        v.width = w;
-        v.height = h;
-        v.style.width = w + 'px';
-        v.style.height = h + 'px';
-        v.style.left = '0';
-        v.style.top = '0';
-        v.style.position = 'absolute';
-        v.style.margin = '0';
-      }
-      // Body
-      document.body.style.width = w + 'px';
-      document.body.style.height = h + 'px';
-      document.body.style.margin = '0';
-    }
-
-    // Hook in A-Frame/AR.js resize events
-    function patchResize() {
-      // Patch AFRAME's internal resize method if present
-      if (window.AFRAME && AFRAME.scenes && AFRAME.scenes.length) {
-        AFRAME.scenes.forEach(scene => {
-          if (scene.renderer && scene.renderer.setSize) {
-            const origSetSize = scene.renderer.setSize.bind(scene.renderer);
-            scene.renderer.setSize = function(width, height, updateStyle) {
-              // always use viewport size
-              origSetSize(window.innerWidth, window.innerHeight, true);
-              forceViewportSize();
-            };
-          }
-        });
-      }
-      forceViewportSize();
-    }
-
-    window.addEventListener('resize', () => setTimeout(forceViewportSize, 50));
-    window.addEventListener('orientationchange', () => setTimeout(forceViewportSize, 100));
-    window.addEventListener('DOMContentLoaded', () => setTimeout(() => {
-      forceViewportSize();
-      patchResize();
-    }, 200));
-    setTimeout(() => {
-      forceViewportSize();
-      patchResize();
-    }, 400);
-  </script>
+  <script src="./aframe-ar.js"></script>
 </head>
 <body>
   <!-- =======================
@@ -248,47 +186,6 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
-
-    // Fix: Setze body/canvas/video immer auf Viewport-Größe (gegen Hochskalierung in Chrome)
-    function fixARSize() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      document.body.style.width = w + 'px';
-      document.body.style.height = h + 'px';
-      document.body.style.margin = '0';
-      // Canvas fix
-      document.querySelectorAll('canvas.a-canvas').forEach(c => {
-        c.style.width = w + 'px';
-        c.style.height = h + 'px';
-      });
-      // Video fix
-      const v = document.getElementById('arjs-video');
-      if (v) {
-        v.style.width = w + 'px';
-        v.style.height = h + 'px';
-        v.style.margin = '0';
-        v.style.left = '0';
-        v.style.top = '0';
-      }
-    }
-    window.addEventListener('resize', () => setTimeout(fixARSize, 50));
-    window.addEventListener('orientationchange', () => setTimeout(fixARSize, 100));
-    window.addEventListener('DOMContentLoaded', () => setTimeout(fixARSize, 100));
-    setTimeout(fixARSize, 200);
-
-    // MutationObserver: Überschreibt jede Änderung an body/canvas/video sofort
-    function observeAndFix() {
-      const targets = [
-        document.body,
-        ...document.querySelectorAll('canvas.a-canvas'),
-        document.getElementById('arjs-video')
-      ].filter(Boolean);
-      targets.forEach(target => {
-        new MutationObserver(() => fixARSize()).observe(target, { attributes: true, attributeFilter: ['style', 'width', 'height'] });
-      });
-    }
-    window.addEventListener('DOMContentLoaded', () => setTimeout(observeAndFix, 200));
-    setTimeout(observeAndFix, 400);
   </script>
 </body>
 </html>
