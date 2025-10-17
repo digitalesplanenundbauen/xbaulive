@@ -175,20 +175,6 @@
       apply(); window.addEventListener('orientationchange',apply);
     })();
 
-    // Video-Orientierungsfix (für Kamerahintergrund, besonders in Firefox)
-    (function(){
-      const video = document.getElementById('arjs-video'); if(!video) return;
-      const ROTATIONS = { 'portrait-primary':'rotate(90deg)', 'portrait-secondary':'rotate(-90deg)', 'landscape-primary':'rotate(0deg)', 'landscape-secondary':'rotate(180deg)' };
-      const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
-                    : (typeof window.orientation==='number' ? window.orientation : 0);
-      const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
-      function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
-      function apply(){ video.style.transform = ROTATIONS[type()]; }
-      apply(); window.addEventListener('orientationchange',apply);
-      // Zusätzlicher Listener für Resize-Events, um bei Größenänderungen neu zu rendern
-      window.addEventListener('resize', () => { if (document.getElementById('world-yaw')?.sceneEl) document.getElementById('world-yaw').sceneEl.renderer.setSize(window.innerWidth, window.innerHeight); });
-    })();
-
     // GPS-Toggle: Simulation ↔ echtes GPS (minAccuracy)
     const cam = document.getElementById('cam');
     const gpsBtn = document.getElementById('gpsBtn');
@@ -200,6 +186,33 @@
     }
     gpsBtn?.addEventListener('click',()=>{ gpsOn=!gpsOn; applyGPS(); });
     applyGPS();
+
+    // Fix: Setze body/canvas/video immer auf Viewport-Größe (gegen Hochskalierung in Chrome)
+    function fixARSize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      document.body.style.width = w + 'px';
+      document.body.style.height = h + 'px';
+      document.body.style.margin = '0';
+      // Canvas fix
+      document.querySelectorAll('canvas.a-canvas').forEach(c => {
+        c.style.width = w + 'px';
+        c.style.height = h + 'px';
+      });
+      // Video fix
+      const v = document.getElementById('arjs-video');
+      if (v) {
+        v.style.width = w + 'px';
+        v.style.height = h + 'px';
+        v.style.margin = '0';
+        v.style.left = '0';
+        v.style.top = '0';
+      }
+    }
+    window.addEventListener('resize', fixARSize);
+    window.addEventListener('orientationchange', fixARSize);
+    window.addEventListener('DOMContentLoaded', fixARSize);
+    setTimeout(fixARSize, 100); // falls AR.js/A-Frame verzögert initialisiert
   </script>
 </body>
 </html>
