@@ -209,10 +209,24 @@
         v.style.top = '0';
       }
     }
-    window.addEventListener('resize', fixARSize);
-    window.addEventListener('orientationchange', fixARSize);
-    window.addEventListener('DOMContentLoaded', fixARSize);
-    setTimeout(fixARSize, 100); // falls AR.js/A-Frame verzögert initialisiert
+    window.addEventListener('resize', () => setTimeout(fixARSize, 50));
+    window.addEventListener('orientationchange', () => setTimeout(fixARSize, 100));
+    window.addEventListener('DOMContentLoaded', () => setTimeout(fixARSize, 100));
+    setTimeout(fixARSize, 200);
+
+    // MutationObserver: Überschreibt jede Änderung an body/canvas/video sofort
+    function observeAndFix() {
+      const targets = [
+        document.body,
+        ...document.querySelectorAll('canvas.a-canvas'),
+        document.getElementById('arjs-video')
+      ].filter(Boolean);
+      targets.forEach(target => {
+        new MutationObserver(() => fixARSize()).observe(target, { attributes: true, attributeFilter: ['style', 'width', 'height'] });
+      });
+    }
+    window.addEventListener('DOMContentLoaded', () => setTimeout(observeAndFix, 200));
+    setTimeout(observeAndFix, 400);
   </script>
 </body>
 </html>
