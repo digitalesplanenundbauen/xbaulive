@@ -71,8 +71,8 @@
        A-Frame + AR.js
        ======================= -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
-  <script src="./aframe-ar.js"></script>
+  <script src="https://github.com/AR-js-org/AR.js/blob/master/three.js/build/ar-threex-location-only.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
 <body>
   <!-- =======================
@@ -93,27 +93,36 @@
        ======================= -->
   <main>
     <div id="content-preview">
-      <a-scene
-        renderer="logarithmicDepthBuffer: true; alpha: true;"
-        embedded
-        loading-screen="enabled: false;"
-        xr-mode-ui="enabled: false"
-        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
-        <!-- GLB aus Assets (sauberes Preload) -->
-        <a-assets>
+
+ 
+            <a-scene  
+      embedded
+      loading-screen="enabled: false;"
+      vr-mode-ui='enabled: false'
+      xr-mode-ui="enabled: false"
+      arjs='sourceType: webcam; gpsMinDistance: 2;  debugUIEnabled: false' 
+      renderer='antialias: true; alpha: true'>
+
+      <a-camera gps-new-camera='gpsMinDistance: 5; simulateLatitude: 47.866880722; simulateLongitude: 12.109128178'></a-camera>
+	<!--<a-entity gps-new-entity-place="latitude: 47.867615758; longitude: 12.109218307" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+  
+  videoTexture: true;
+  
+  -->     
+  <a-assets>
           <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
         </a-assets>
-        <!-- Welt-Node + Geoposition -->
+
         <a-entity id="world-yaw" rotation="0 0 0">
-          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+          <a-entity gps-new-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
             <a-entity gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
           </a-entity>
         </a-entity>
-        <!-- Kamera (Simulation an / echtes GPS per Button) -->
-        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
-      </a-scene>
+</a-scene>
+
     </div>
   </main>
+
 
   <!-- =======================
        Fußzeile
