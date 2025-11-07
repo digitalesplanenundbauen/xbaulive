@@ -22,7 +22,7 @@ body {
   display: grid;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   grid-template-rows: auto 1fr auto;
-  /*min-height: 100dvh; */
+  min-height: 100dvh;
   overflow: hidden;
 }
 
