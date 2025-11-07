@@ -5,82 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex">
    <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
-  <!-- =======================
-       Grundstyling
-       ======================= -->
-  <style>
-    :root{ --bg:#ffffff; --text:#212121; --muted:#4b5563; --accent:#F39205; --border:rgba(0,0,0,0.08); --radius:0 }
-    *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0 }
-    body{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--text); background:var(--bg); display:grid; grid-template-rows:auto 1fr auto; overflow:hidden }
-    header{ 
-      text-align:center; 
-      position:sticky; 
-      top:0; 
-      z-index:10; 
-      background:#fff; 
-      border-bottom:1px solid #d0d0d0; /* dünnere Linie wie in index.html */
-    }
-    .header-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:18px }
-    .site-title{ text-align:left; line-height:1.1 }
-    .site-title .top,.site-title .bottom{ font-weight:700; font-size:clamp(20px,3vw,28px) }
-    .logo{ height:clamp(40px,4.3vw,60px); width:auto }
-    main{ position:relative; min-height:0 }
-
-    #gps-status {
-  position: fixed;
-  z-index: 1001;
-  top: 12px;
-  right: 18px;
-  background: transparent;
-  display: none;
-  text-align: right;
-  align-items: center;
-  gap: 7px;
-}
-
-    #content-preview{ position:absolute; inset:0; background:transparent }
-    a-scene{ 
-      width:100%; 
-      height:100%; 
-      display:block; 
-      touch-action:none; 
-      background:transparent !important;
-      /* entferne position/max-width/max-height */
-    }
-    footer{ 
-      position:sticky; 
-      bottom:0; 
-      z-index:10; 
-      background:#fff; 
-      border-top:1px solid #d0d0d0; /* dünnere Linie wie in index.html */
-      text-align:center 
-    }
-    .footer-inner{max-width:1200px; margin:0 auto; padding:17px 22px; display:flex; gap:17px; align-items:center; justify-content:center; flex-wrap:wrap }
-    .live-btn{ background:var(--accent); color:#0b0c10; font-weight:800; letter-spacing:0.3px; font-size:clamp(17px,2.6vw,20px); padding:14px 25px; border:0; border-radius:var(--radius); cursor:pointer }
-    .footer-text{ font-size:clamp(15px,2.3vw,18px); color:var(--muted) }
-    .footer-secondary {
-      background: #fff;
-      border-top: 1px solid #d0d0d0;
-      border-bottom: 1px solid #d0d0d0; /* dünnere untere Trennlinie */
-      text-align: center;
-      font-size: 11px;
-      padding: 0;
-    }
-    .footer-secondary-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 5px 18px 5px 18px;
-    }
-    .footer-lab {
-      color: #4b5563;
-      font-size: 11px;
-      font-weight: 400;
-    }
-    .footer-lab strong {
-      font-weight: 500;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
   <!-- =======================
        A-Frame + AR.js
        ======================= -->
@@ -101,19 +26,21 @@
       <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
     </div>
   </header>
+  <main class="main-transparent">
 
-    <!-- GPS-Statusanzeige fixiert am rechten Bildschirmrand -->
-      <div id="gps-status">
+                  <!-- GPS-Statusanzeige fixiert am rechten Bildschirmrand -->
+    <div id="gps-status">
       <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d00;"></span>
       <span style="font-size:11px;font-weight:700;">GPS aktiviert</span>
     </div>
 
-  <main>
   <!-- =======================
        Hauptbereich: AR-Szene
        ======================= -->
 
     <div id="content-preview">
+
+
 
       <a-scene
         renderer="logarithmicDepthBuffer: true; alpha: true;"
@@ -133,6 +60,8 @@
         </a-entity>
         <!-- Kamera (Simulation an / echtes GPS per Button) -->
         <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      
+      
       </a-scene>
     </div>
   </main>
@@ -141,39 +70,14 @@
        Fußzeile
        ======================= -->
   <footer>
-    <div class="footer-inner">
+    <div class="footer-top">
       <button class="live-btn" id="backBtn">Zurück</button>
       <button class="live-btn" id="gpsBtn">GPS ein</button>
     </div>
-  </footer>
-  <footer class="footer-secondary">
-    <div class="footer-secondary-inner">
+    <div class="footer-bottom">
       <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
     </div>
   </footer>
-  <style>
-    .footer-secondary {
-      background: #fff;
-      border-top: 1px solid #d0d0d0;
-      border-bottom: 1px solid #d0d0d0; /* dünnere untere Trennlinie */
-      text-align: center;
-      font-size: 11px;
-      padding: 0;
-    }
-    .footer-secondary-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 5px 18px 5px 18px;
-    }
-    .footer-lab {
-      color: #4b5563;
-      font-size: 11px;
-      font-weight: 400;
-    }
-    .footer-lab strong {
-      font-weight: 500;
-    }
-  </style>
 
   <!-- =======================
        Interaktion & Funktion
