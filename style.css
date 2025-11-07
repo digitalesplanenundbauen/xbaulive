@@ -87,12 +87,9 @@ main.main-transparent #content-preview {
 a-scene {
   background: transparent !important;
   display: block;
+  height: 100%;
   touch-action: none;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  margin: 0 auto;
+  width: 100%;
 }
 
 /* Footer */
