@@ -36,7 +36,7 @@
   <main class="main-transparent">
 
   <!-- GPS-Statusanzeige fixiert am  rechten Bildschirmrand -->
-    <div id="gps-status">
+    <div id="gps-status" style="display: flex;">
       <span class="gps-status-dot"></span>
       <span class="gps-status-text">GPS aktiviert</span>
     </div>
@@ -55,11 +55,11 @@
         <!-- Welt-Node + Geoposition -->
         <a-entity id="world-yaw" rotation="0 0 0">
           <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
-            <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+            <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="0 0 0"></a-entity>
           </a-entity>
         </a-entity>
-        <!-- Kamera (Simulation an / echtes GPS per Button) -->
-        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+        <!-- Kamera (nur echtes GPS) -->
+        <a-camera id="cam" gps-camera="minAccuracy: 50" rotation-reader></a-camera>
       </a-scene>
     </div>
   </main>
@@ -70,7 +70,7 @@
   <footer>
     <div class="footer-top">
       <button class="footer-btn" id="backBtn">Zurück</button>
-      <button class="footer-btn" id="gpsBtn">GPS ein</button>
+      <button class="footer-btn" id="gpsBtn">GPS aus</button>
     </div>
     <div class="footer-bottom">
       <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
@@ -83,6 +83,9 @@
 <script>
   // Navigation zurück zur Startseite
   document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
+
+  // GPS aus → zurück zu live.html
+  document.getElementById('gpsBtn')?.addEventListener('click',()=>location.href='live.html');
 
   // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
   (function(){
@@ -98,70 +101,6 @@
     function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
     apply(); window.addEventListener('orientationchange',apply);
   })();
-
-  // ------- GPS Toggle: Simulation ↔ echtes GPS -------
-  const scene = document.querySelector('a-scene');
-  const gpsBtn = document.getElementById('gpsBtn');
-  const gpsStatus = document.getElementById('gps-status');
-
-  // Wunsch-Zustände (deine Ziele):
-  // 1) Simulation:  <a-camera id="cam" gps-camera="simulateLatitude: ...; simulateLongitude: ..." rotation-reader>
-  //                  <a-entity gltf-model="#animated-asset" position="-20 -4 -10">
-  // 2) Echt-GPS:    <a-camera id="cam" gps-camera="minAccuracy: 50" rotation-reader>
-  //                  <a-entity gltf-model="#animated-asset" position="0 0 0">
-
-  const SIM_LAT = 47.866880722;
-  const SIM_LON = 12.109128178;
-
-  let gpsOn = false; // start: Simulation AUS (also Simulation aktiv)
-
-  function getRefs() {
-    const cam = document.getElementById('cam');
-    const modelEntity = document.getElementById('modelEntity');
-    return { cam, modelEntity };
-  }
-
-  function applyGPS() {
-    const { cam, modelEntity } = getRefs();
-    if (!cam || !modelEntity) return;
-
-    // Komponente sauber neu setzen: zuerst entfernen, dann mit neuen Props hinzufügen
-    if (gpsOn) {
-      // ECHTES GPS
-      cam.removeAttribute('gps-camera');
-      cam.setAttribute('gps-camera', 'minAccuracy: 50');
-      modelEntity.setAttribute('position', '0 0 0');
-
-      gpsBtn.textContent = 'GPS aus';
-      if (gpsStatus) gpsStatus.style.display = 'flex';
-    } else {
-      // SIMULATION
-      cam.removeAttribute('gps-camera');
-      cam.setAttribute('gps-camera', `simulateLatitude: ${SIM_LAT}; simulateLongitude: ${SIM_LON};`);
-      modelEntity.setAttribute('position', '-20 -4 -10');
-
-      gpsBtn.textContent = 'GPS ein';
-      if (gpsStatus) gpsStatus.style.display = 'none';
-    }
-  }
-
-  // Erst initialisieren, wenn die Szene fertig ist (Komponenten sind dann bereit)
-  function initGPS() {
-    applyGPS();
-    gpsBtn?.addEventListener('click', () => {
-      gpsOn = !gpsOn;
-      applyGPS();
-    });
-  }
-
-  if (scene && scene.hasLoaded) {
-    initGPS();
-  } else if (scene) {
-    scene.addEventListener('loaded', initGPS, { once: true });
-  } else {
-    // Fallback, falls embedded Szene noch nicht greifbar wäre
-    window.addEventListener('DOMContentLoaded', initGPS, { once: true });
-  }
 
   // ------- GPS-Statusbox unter dem Header positionieren -------
   let gpsBoxOffset = 10; // px Abstand
