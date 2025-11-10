@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
+  
+   <!-- =======================
+       A-Frame + AR.js
+       ======================= -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+</head>
+
+<body>
+  <!-- =======================
+       Kopfzeile
+       ======================= -->
+  <header>
+    <div class="header-inner">
+      <div class="site-title" aria-label="Projektname">
+        Technologiepark <br>
+        &amp; Studierendenzentrum
+      </div>
+      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
+    </div>
+  </header>
+
+  <!-- =======================
+       Hauptbereich: AR-Szene
+       ======================= -->
+  <main class="main-transparent">
+
+  <!-- GPS-Statusanzeige fixiert am  rechten Bildschirmrand -->
+    <div id="gps-status">
+      <span class="gps-status-dot"></span>
+      <span class="gps-status-text">GPS aktiviert</span>
+    </div>
+
+    <div id="content-preview">
+      <a-scene
+        renderer="logarithmicDepthBuffer: true; alpha: true;"
+        embedded
+        loading-screen="enabled: false;"
+        xr-mode-ui="enabled: false"
+        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+        <!-- GLB aus Assets -->
+        <a-assets>
+          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        </a-assets>
+        <!-- Welt-Node + Geoposition -->
+        <a-entity id="world-yaw" rotation="0 0 0">
+          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+            <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+          </a-entity>
+        </a-entity>
+        <!-- Kamera (Simulation an / echtes GPS per Button) -->
+        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      </a-scene>
+    </div>
+  </main>
+
+  <!-- =======================
+       Fußzeile
+       ======================= -->
+  <footer>
+    <div class="footer-top">
+      <button class="footer-btn" id="backBtn">Zurück</button>
+      <button class="footer-btn" id="gpsBtn">GPS ein</button>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
+    </div>
+  </footer>
+
+  <!-- =======================
+       Interaktion & Funktion
+       ======================= -->
+<script>
+  // Navigation zurück zur Startseite
+  document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
+
+// GPS ein → zu live-gps.html
+  document.getElementById('gpsBtn')?.addEventListener('click',()=>location.href='live-gps.html');
+
+</script>
+  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+</body>
+</html>
