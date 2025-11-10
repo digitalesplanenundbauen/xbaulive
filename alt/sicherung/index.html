@@ -15,6 +15,19 @@
 </head>
 
 <body>
+  <!-- Popup für Sensorzugriff -->
+  <div id="sensor-popup" style="display:none;">
+    <div id="sensor-popup-content">
+      <span class="popup-text">
+        Diese Anwendung benötigt für seine Funktion <br> 
+        den Zugriff auf die Sensoren deines Gerätes.
+      </span>
+      <br>
+      <br>
+      <button id="sensor-popup-ok" class="popup-btn">Ok</button>
+    </div>
+  </div>
+
   <!-- =====================
        Kopfzeile
        ===================== -->
@@ -50,7 +63,7 @@
        ===================== -->
   <footer>
     <div class="footer-top">
-      <button class="live-btn" id="liveBtn">Live</button>
+      <button class="footer-btn" id="liveBtn">Live</button>
       <span class="footer-text">Lass dir das Gebäude <br> in der Realität darstellen.</span>
     </div>
     <div class="footer-bottom">
@@ -62,6 +75,17 @@
        Interaktion & Funktion
        ===================== -->
   <script>
+    // Popup-Logik
+    function shouldShowPopup() {
+      return !/hideSensorPopup=1/.test(location.search);
+    }
+    if (shouldShowPopup()) {
+      document.getElementById('sensor-popup').style.display = '';
+    }
+    document.getElementById('sensor-popup-ok').onclick = function() {
+      document.getElementById('sensor-popup').style.display = 'none';
+    };
+
     // === GLB Viewer ===
     const scene = document.querySelector('a-scene');
     const model = document.getElementById('model');

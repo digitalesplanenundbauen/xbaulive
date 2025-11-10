@@ -69,8 +69,8 @@
        ======================= -->
   <footer>
     <div class="footer-top">
-      <button class="live-btn" id="backBtn">Zurück</button>
-      <button class="live-btn" id="gpsBtn">GPS ein</button>
+      <button class="footer-btn" id="backBtn">Zurück</button>
+      <button class="footer-btn" id="gpsBtn">GPS ein</button>
     </div>
     <div class="footer-bottom">
       <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
@@ -82,7 +82,7 @@
        ======================= -->
   <script>
     // Navigation zurück zur Startseite
-    document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html');
+    document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
 
     // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
     (function(){
