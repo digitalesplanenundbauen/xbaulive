@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
+  
+   <!-- =======================
+       A-Frame + AR.js
+       ======================= -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+</head>
+
+<body>
+  <!-- =======================
+       Kopfzeile
+       ======================= -->
+  <header>
+    <div class="header-inner">
+      <div class="site-title" aria-label="Projektname">
+        Technologiepark <br>
+        &amp; Studierendenzentrum
+      </div>
+      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
+    </div>
+  </header>
+
+  <!-- =======================
+       Hauptbereich: AR-Szene
+       ======================= -->
+  <main class="main-transparent">
+
+  <!-- GPS-Statusanzeige fixiert am  rechten Bildschirmrand -->
+    <div id="gps-status">
+      <span class="gps-status-dot"></span>
+      <span class="gps-status-text">GPS aktiviert</span>
+    </div>
+
+    <div id="content-preview">
+      <a-scene
+        renderer="logarithmicDepthBuffer: true; alpha: true;"
+        embedded
+        loading-screen="enabled: false;"
+        xr-mode-ui="enabled: false"
+        arjs="sourceType: webcam; debugUIEnabled: false;">
+        <!-- GLB aus Assets -->
+        <a-assets>
+          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        </a-assets>
+        <!-- Welt-Node + Geoposition -->
+        <a-entity id="world-yaw" rotation="0 0 0">
+          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+            <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+          </a-entity>
+        </a-entity>
+        <!-- Kamera (Simulation an / echtes GPS per Button) -->
+        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      </a-scene>
+    </div>
+  </main>
+
+  <!-- =======================
+       Fußzeile
+       ======================= -->
+  <footer>
+    <div class="footer-top">
+      <button class="footer-btn" id="backBtn">Zurück</button>
+      <button class="footer-btn" id="gpsBtn">GPS ein</button>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
+    </div>
+  </footer>
+
+  <!-- =======================
+       Interaktion & Funktion
+       ======================= -->
+<script>
+  // Navigation zurück zur Startseite
+  document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
+
+  // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
+  (function(){
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(!isIOS) return;
+    const world = document.getElementById('world-yaw'); if(!world) return;
+    const OFFSETS = { 'portrait-primary':0, 'portrait-secondary':180, 'landscape-primary':90, 'landscape-secondary':-90 };
+    const ang = ()=> (screen.orientation && typeof screen.orientation.angle==='number') ? screen.orientation.angle
+                  : (typeof window.orientation==='number' ? window.orientation : 0);
+    const norm = a=>{ a=((a%360)+360)%360; if(a>180)a-=360; return a; };
+    function type(){ const a=norm(ang()); if(a===0)return'portrait-primary'; if(Math.abs(a)===180)return'portrait-secondary'; if(a===90)return'landscape-primary'; if(a===-90)return'landscape-secondary'; return'portrait-primary'; }
+    function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
+    apply(); window.addEventListener('orientationchange',apply);
+  })();
+
+  // ------- GPS Toggle: Simulation ↔ echtes GPS -------
+  const scene = document.querySelector('a-scene');
+  const gpsBtn = document.getElementById('gpsBtn');
+  const gpsStatus = document.getElementById('gps-status');
+
+  // Zielzustände:
+  // - Simulation: Kamera mit simulateLatitude/Longitude, Modell leicht versetzt
+  // - Echt-GPS:   Kamera mit realem watchPosition, Modell bei 0 0 0
+
+  const SIM_LAT = 47.866880722;
+  const SIM_LON = 12.109128178;
+
+  let gpsOn = false; // start: Simulation AUS (also Simulation aktiv)
+
+  function getRefs() {
+    const cam = document.getElementById('cam');
+    const modelEntity = document.getElementById('modelEntity');
+    return { cam, modelEntity };
+  }
+
+  // Ersetzt die Kamera vollständig, um den gps-camera Lifecycle garantiert neu zu starten
+  function replaceCamera(useRealGps) {
+    const sceneEl = document.querySelector('a-scene');
+    const oldCam = document.getElementById('cam');
+    if (!sceneEl || !oldCam) return null;
+
+    // Alte Kamera entfernen (stoppt ggf. watchPosition)
+    try { oldCam.components['gps-camera']?.pause(); } catch(e) {}
+    oldCam.parentNode.removeChild(oldCam);
+
+    // Neue Kamera anlegen
+    const newCam = document.createElement('a-camera');
+    newCam.setAttribute('id', 'cam');
+    newCam.setAttribute('rotation-reader', '');
+
+  // look-controls hinzufügen, damit gps-camera init nicht abbricht
+    newCam.setAttribute('look-controls', 'reverseMouseDrag: true');
+    if (useRealGps) {
+      // Real GPS
+      newCam.setAttribute('gps-camera', `positionMinAccuracy: 1500; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;`);
+    } else {
+      // Simulation
+      newCam.setAttribute('gps-camera', `simulateLatitude: ${SIM_LAT}; simulateLongitude: ${SIM_LON};`);
+    }
+
+    // Neue Kamera an gleicher Stelle im DOM einfügen (unter a-scene)
+    sceneEl.appendChild(newCam);
+    // Nach Ersatz: Places an neue Kamera binden
+    rebindPlacesToCamera(newCam);
+    return newCam;
+  }
+
+  function rebindPlacesToCamera(camEl) {
+    const gpsComp = camEl?.components?.['gps-camera'];
+    document.querySelectorAll('[gps-entity-place]').forEach((el)=>{
+      const place = el.components && el.components['gps-entity-place'];
+      if (place) {
+        place._cameraGps = gpsComp || null;
+        try { place._updatePosition(); } catch(e) {}
+      }
+    });
+  }
+
+  function applyGPS() {
+    const { cam, modelEntity } = getRefs();
+    if (!cam || !modelEntity) return;
+
+    // Komponente sauber neu setzen: zuerst entfernen, dann mit neuen Props hinzufügen
+    if (gpsOn) {
+      // ECHTES GPS
+      const newCam = replaceCamera(true);
+      modelEntity.setAttribute('position', '0 0 0');
+
+      gpsBtn.textContent = 'GPS aus';
+      if (gpsStatus) gpsStatus.style.display = 'flex';
+    } else {
+      // SIMULATION
+      replaceCamera(false);
+      modelEntity.setAttribute('position', '-20 -4 -10');
+
+      gpsBtn.textContent = 'GPS ein';
+      if (gpsStatus) gpsStatus.style.display = 'none';
+    }
+  }
+
+  // Erst initialisieren, wenn die Szene fertig ist (Komponenten sind dann bereit)
+  const onSceneReady = () => {
+    applyGPS();
+    gpsBtn?.addEventListener('click', () => {
+      gpsOn = !gpsOn; // direkt umschalten, Berechtigungsdialog wird vom Browser/AR.js bei Bedarf angezeigt
+      applyGPS();
+    });
+  };
+
+  if (scene && scene.hasLoaded) {
+    onSceneReady();
+  } else if (scene) {
+    scene.addEventListener('loaded', onSceneReady, { once: true });
+  } else {
+    // Fallback, falls embedded Szene noch nicht greifbar wäre
+    window.addEventListener('DOMContentLoaded', onSceneReady, { once: true });
+  }
+
+  // ------- GPS-Statusbox unter dem Header positionieren -------
+  let gpsBoxOffset = 10; // px Abstand
+  function positionGpsStatus() {
+    const header = document.querySelector('header');
+    const box = document.getElementById('gps-status');
+    if (header && box) {
+      const rect = header.getBoundingClientRect();
+      box.style.top = (rect.bottom + gpsBoxOffset) + 'px';
+    }
+  }
+  window.addEventListener('resize', positionGpsStatus);
+  window.addEventListener('DOMContentLoaded', positionGpsStatus);
+
+  // Hinweis: keine manuelle Geopermission mehr – Browser/AR.js regeln den Dialog automatisch
+
+  // --------- Live-Status (Genauigkeit) ---------
+  window.addEventListener('gps-camera-update-position', (e) => {
+    const acc = e?.detail?.position?.accuracy;
+    const txt = document.querySelector('#gps-status .gps-status-text');
+    if (!txt) return;
+    if (gpsOn) {
+      if (typeof acc === 'number') {
+        txt.textContent = `GPS aktiv • ±${Math.round(acc)} m`;
+      } else {
+        txt.textContent = 'GPS aktiv';
+      }
+    }
+  });
+
+</script>
+  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+</body>
+</html>
