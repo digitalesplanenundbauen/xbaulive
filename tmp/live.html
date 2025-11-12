@@ -5,15 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="robots" content="noindex">
   <meta name="color-scheme" content="light" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sstyle.css" />
   <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
   
-   <!-- =======================
-       A-Frame + AR.js
-       ======================= -->
+   <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+<!--Statistik Deviora-->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="//stats.deviora.de/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '2']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
 </head>
 
 <body>
@@ -43,12 +55,11 @@
 
     <div id="content-preview">
       <a-scene
-      background="color: white"
-      renderer="logarithmicDepthBuffer: true; alpha: true;"
-      loading-screen="enabled: false;"
-      xr-mode-ui="enabled: false"
-      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
-      >
+        renderer="logarithmicDepthBuffer: true; alpha: true;"
+        
+        loading-screen="enabled: false;"
+        xr-mode-ui="enabled: false"
+        arjs='sourceType: webcam; videoTexture: true; debugUIEnabled: false'>
         <!-- GLB aus Assets -->
         <a-assets>
           <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
@@ -59,6 +70,8 @@
             <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
           </a-entity>
         </a-entity>
+      
+        <!--<a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>-->
         <!-- Kamera (Simulation an / echtes GPS per Button) -->
         <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
       </a-scene>
@@ -81,10 +94,10 @@
   <!-- =======================
        Interaktion & Funktion
        ======================= -->
-<script>
+<!--<script>
   // Navigation zurück zur Startseite
   document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
-
+  
   // iOS-Orientierungsfix (richtet Modell korrekt zur Gerätelage aus)
   (function(){
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -99,7 +112,7 @@
     function apply(){ world.setAttribute('rotation',`0 ${ { 'portrait-primary':0,'portrait-secondary':180,'landscape-primary':90,'landscape-secondary':-90 }[type()] } 0`); }
     apply(); window.addEventListener('orientationchange',apply);
   })();
-
+  
   // ------- GPS Toggle: Simulation ↔ echtes GPS -------
   const scene = document.querySelector('a-scene');
   const gpsBtn = document.getElementById('gpsBtn');
@@ -232,35 +245,7 @@
     }
   });
 
-  // ------- Hintergrund: Weiß vor Start, transparent sobald Kamera läuft -------
-  // Falls 'background="color: ..."' gesetzt ist, sorgt AR.js nicht automatisch wieder für Transparenz.
-  // Wir stellen beim Start des Videostreams die Canvas-Alpha wieder auf 0.
- 
-  (function(){
-    const sceneEl = document.querySelector('a-scene');
-    function setTransparent() {
-      if (!sceneEl) return;
-      try { sceneEl.removeAttribute('background'); } catch(e) {}
-      const setAlpha = () => { try { sceneEl.renderer.setClearAlpha(0); } catch(e) {} };
-      if (sceneEl.renderer) setAlpha();
-      else sceneEl.addEventListener('renderstart', setAlpha, { once: true });
-    }
-
-    const mo = new MutationObserver((mutations)=>{
-      for (const m of mutations) {
-        for (const n of m.addedNodes) {
-          if (n && n.nodeName === 'VIDEO') {
-            n.addEventListener('playing', setTransparent, { once: true });
-            n.addEventListener('canplay', setTransparent, { once: true });
-          }
-        }
-      }
-    });
-    try { mo.observe(document.body, { childList: true, subtree: true }); } catch(e) {}
-    
-  })();
-
 </script>
-  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+-->
 </body>
 </html>

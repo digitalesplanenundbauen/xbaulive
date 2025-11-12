@@ -11,12 +11,8 @@
 }
 
 html, body {
-  height: 100%;
-  margin: 0;
-}
-
-.arjs-loader {
-  background-color: #fff;
+  
+  margin: 0; 
 }
 
 body {
@@ -98,8 +94,7 @@ footer {
   border-top: 1px solid #d0d0d0;
   bottom: 0;
   padding: 0;
-  position: absolute;
-  width: 100%;
+  position: sticky;
   text-align: center;
   z-index: 10;
 }
