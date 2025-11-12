@@ -47,7 +47,7 @@
         embedded
         loading-screen="enabled: false;"
         xr-mode-ui="enabled: false"
-        arjs="sourceType: webcam; gpsMinDistance: 2; debugUIEnabled: false;">
+        arjs="sourceType: webcam; debugUIEnabled: false;">
         <!-- GLB aus Assets -->
         <a-assets>
           <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
@@ -129,7 +129,7 @@
     if (gpsOn) {
       // ECHTES GPS
       cam.removeAttribute('gps-camera');
-      cam.setAttribute('gps-camera', 'minAccuracy: 50');
+      cam.setAttribute('gps-camera', `positionMinAccuracy: 1500; gpsMinDistance: 2;`);
       modelEntity.setAttribute('position', '0 0 0');
 
       gpsBtn.textContent = 'GPS aus';

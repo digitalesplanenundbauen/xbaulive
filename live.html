@@ -8,12 +8,24 @@
   <link rel="stylesheet" href="style.css" />
   <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
   
-   <!-- =======================
-       A-Frame + AR.js
-       ======================= -->
+   <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+<!--Statistik Deviora-->
+<script>
+  var _paq = window._paq = window._paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="//stats.deviora.de/";
+    _paq.push(['setTrackerUrl', u+'matomo.php']);
+    _paq.push(['setSiteId', '2']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
 </head>
 
 <body>
@@ -232,6 +244,5 @@
   });
 
 </script>
-  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
 </body>
 </html>
