@@ -11,6 +11,9 @@
   <!-- A-Frame (3D Framework) -->
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   
+  <!-- Orbit Controls for A-Frame -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-orbit-controls-component@1.3.2/dist/aframe-orbit-controls-component.min.js"></script>
+  
   <!-- Statistik Deviora -->
   <script>
     var _paq = window._paq = window._paq || [];
@@ -108,7 +111,7 @@
 
     // Steuerungsparameter
     const rotSpeed = 0.3; // deg per px
-    const zoomMin = 0.5, zoomMax = 200, pinchFactor = 0.005;
+    const zoomMin = 0.5, zoomMax = 200, pinchFactor = 0.5;
     let isDragging=false, lastX=0, lastY=0, lastPinch=null;
 
     // Hilfsfunktionen
