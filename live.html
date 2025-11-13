@@ -103,24 +103,35 @@
   document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
 
 
-    // Anzeige-Korrekturen: iOS-Orientierung + Modell-Scale je Ausrichtung (ein Block)
+    // Anzeige-Korrekturen: iOS-Orientierung (iPhone/iPad-spezifisch) + Modell-Scale je Ausrichtung
     // Hinweise:
-    // - Werte unten in OFFSETS und SCALE anpassen, falls Ausrichtung oder Größe nicht passt.
+    // - Werte unten in OFFSETS_IPHONE / OFFSETS_IPAD und SCALE anpassen.
     // - Dieser Block ist die einzige Stelle für Orientierung/Skalierung.
     (function(){
       // Konfiguration: Korrekturwerte (Grad) und Scale-Faktoren (x y z)
-      const IOS_ORIENTATION_OFFSETS = {
-        'portrait-primary': 90,         // Hochformat, Home-Button unten
-        'portrait-secondary': -90,      // Hochformat, Home-Button oben
-        'landscape-primary': 0,         // Querformat, Home-Button rechts
-        'landscape-secondary': 180      // Querformat, Home-Button links
+      // iPhone: aktuelle Standardwerte aus deinem Projekt
+      const IOS_OFFSETS_IPHONE = {
+        'portrait-primary': 0,
+        'portrait-secondary': 0,
+        'landscape-primary': 0,
+        'landscape-secondary': 0
+      };
+      // iPad: alternative Zuordnung (klassisch: 0/180/90/-90). Bei Bedarf anpassen.
+      const IOS_OFFSETS_IPAD = {
+        'portrait-primary': 0,
+        'portrait-secondary': 180,
+        'landscape-primary': 90,
+        'landscape-secondary': -90
       };
       const LANDSCAPE_SCALE = '1.0 1.0 1.0';  // Querformat-Skalierung
       const PORTRAIT_SCALE  = '0.8 0.8 0.8';  // Hochformat-Skalierung
 
       // Hilfsfunktionen
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const ua = navigator.userAgent;
+      const isIPad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isIPhone = /iPhone|iPod/.test(ua) && !isIPad;
+      const isIOS = isIPad || isIPhone;
+      const IOS_OFFSETS = isIPad ? IOS_OFFSETS_IPAD : IOS_OFFSETS_IPHONE;
       const world = document.getElementById('world-yaw');
       const model = document.getElementById('modelEntity');
       if (!world && !model) return;
@@ -143,10 +154,10 @@
         return angle === 90 || angle === -90 || angle === 270;
       }
       function applyOrientationAndScale() {
-        // iOS-Orientierung korrigieren (nur auf iOS)
+        // iOS-Orientierung korrigieren (iPhone/iPad spezifische Offsets)
         if (isIOS && world) {
           const type = getType();
-          const offset = IOS_ORIENTATION_OFFSETS[type] || 0;
+          const offset = IOS_OFFSETS[type] || 0;
           world.setAttribute('rotation', `0 ${offset} 0`);
         }
         // Modell-Skalierung je Ausrichtung
