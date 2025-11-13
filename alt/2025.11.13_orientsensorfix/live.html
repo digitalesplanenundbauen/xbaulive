@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
+  
+   <!-- =======================
+       A-Frame + AR.js
+       ======================= -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+  
+  <!-- Statistik Deviora -->
+  <script>
+    var _paq = window._paq = window._paq || [];
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+      var u="//stats.deviora.de/";
+      _paq.push(['setTrackerUrl', u+'matomo.php']);
+      _paq.push(['setSiteId', '2']);
+      var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+      g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+    })();
+  </script>
+
+</head>
+
+<body>
+  <!-- =======================
+       Kopfzeile
+       ======================= -->
+  <header>
+    <div class="header-inner">
+      <div class="site-title" aria-label="Projektname">
+        Technologiepark <br>
+        &amp; Studierendenzentrum
+      </div>
+      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
+    </div>
+  </header>
+
+  <!-- =======================
+       Hauptbereich: AR-Szene
+       ======================= -->
+  <main class="main-transparent">
+
+  <!-- GPS-Statusanzeige fixiert am  rechten Bildschirmrand -->
+    <div id="gps-status">
+      <span class="gps-status-dot"></span>
+      <span class="gps-status-text">GPS aktiviert</span>
+    </div>
+
+    <div id="content-preview">
+      <a-scene
+      background="color: white"
+      renderer="logarithmicDepthBuffer: true; alpha: true;"
+      loading-screen="enabled: false;"
+      xr-mode-ui="enabled: false"
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
+      >
+        <!-- GLB aus Assets -->
+        <a-assets>
+          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        </a-assets>
+        <!-- Welt-Node + Geoposition -->
+        <a-entity id="world-yaw" rotation="0 0 0">
+          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+            <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+          </a-entity>
+        </a-entity>
+        <!-- Kamera (Simulation an / echtes GPS per Button) -->
+        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      </a-scene>
+    </div>
+  </main>
+
+  <!-- =======================
+       Fußzeile
+       ======================= -->
+  <footer>
+    <div class="footer-top">
+      <button class="footer-btn" id="backBtn">Zurück</button>
+      <button class="footer-btn" id="gpsBtn">GPS ein</button>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
+    </div>
+  </footer>
+
+  <!-- =======================
+       Interaktion & Funktion
+       ======================= -->
+<script>
+
+  // Navigation zurück zur Startseite
+  document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
+
+  // iOS-Orientierungsfix (nur Sensoren; kein screen/window.orientation)
+  (function(){
+    // Zentral konfigurierbar: Korrekturwerte und Verhalten
+    const ORIENT_CONFIG = {
+      offsets: {
+        'portrait-primary': 0,      // Hochformat, Home-Button unten
+        'portrait-secondary': 180,   // Hochformat, Home-Button oben
+        'landscape-primary': -90,      // Querformat, Home-Button rechts
+        'landscape-secondary': 90   // Querformat, Home-Button links
+      },
+      throttleMs: 100,    // Mindestabstand zwischen Updates
+      hysteresisCount: 2  // Stabilisierung gegen Flackern
+    };
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(!isIOS) return; // nur iOS-Fix anwenden
+
+    const world = document.getElementById('world-yaw');
+    if(!world) return;
+
+    let lastType = null;
+    let candidateType = null;
+    let candidateStreak = 0;
+    let lastTs = 0;
+    let listening = false;
+    let promptEl = null;
+
+    // Bestimme Geräteausrichtung rein aus Sensorwerten (beta/gamma)
+    function classify(beta, gamma){
+      const ab = Math.abs(beta || 0);
+      const ag = Math.abs(gamma || 0);
+      if(ag >= ab){
+        return (gamma || 0) >= 0 ? 'landscape-primary' : 'landscape-secondary';
+      } else {
+        return (beta || 0) >= 0 ? 'portrait-primary' : 'portrait-secondary';
+      }
+    }
+
+    function applyType(type){
+      const offset = ORIENT_CONFIG.offsets[type] ?? 0;
+      world.setAttribute('rotation', `0 ${offset} 0`);
+    }
+
+    function onDeviceOrientation(e){
+      const now = Date.now();
+      if(now - lastTs < ORIENT_CONFIG.throttleMs) return;
+      lastTs = now;
+
+      const beta = typeof e.beta === 'number' ? e.beta : 0;
+      const gamma = typeof e.gamma === 'number' ? e.gamma : 0;
+      const t = classify(beta, gamma);
+
+      if(t !== candidateType){
+        candidateType = t;
+        candidateStreak = 1;
+      } else {
+        candidateStreak++;
+      }
+
+      if(t !== lastType && candidateStreak >= ORIENT_CONFIG.hysteresisCount){
+        lastType = t;
+        applyType(t);
+      }
+    }
+
+    function hidePrompt(){
+      if(promptEl && promptEl.parentNode){ promptEl.parentNode.removeChild(promptEl); }
+      promptEl = null;
+    }
+
+    async function ensurePermissionAndListen(){
+      if(listening) return;
+      listening = true;
+      try {
+        if(typeof DeviceOrientationEvent !== 'undefined' &&
+           typeof DeviceOrientationEvent.requestPermission === 'function'){
+          const state = await DeviceOrientationEvent.requestPermission();
+          if(state !== 'granted') { listening = false; return; }
+        }
+      } catch(_) {}
+      window.addEventListener('deviceorientation', onDeviceOrientation, false);
+      hidePrompt();
+    }
+
+    function showPermissionPrompt(){
+      if(promptEl) return;
+      promptEl = document.createElement('div');
+      promptEl.setAttribute('style', 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.9);z-index:9999;');
+      const inner = document.createElement('div');
+      inner.setAttribute('style','max-width:90%;text-align:center;font-family:sans-serif;color:#222;');
+      inner.innerHTML = '<div style="font-size:18px;margin-bottom:12px;">Sensorzugriff erforderlich</div>'+
+                        '<div style="font-size:14px;margin-bottom:16px;">Tippe auf den Button, um die Gerätesensoren (Neigung) zu aktivieren.</div>'+
+                        '<button id="sensorGrantBtn" style="padding:10px 16px;font-size:16px;border-radius:6px;border:1px solid #333;background:#111;color:#fff;">Sensoren aktivieren</button>';
+      promptEl.appendChild(inner);
+      document.body.appendChild(promptEl);
+      const btn = promptEl.querySelector('#sensorGrantBtn');
+      if(btn){ btn.addEventListener('click', ()=>{ ensurePermissionAndListen(); }, { once:true }); }
+      promptEl.addEventListener('pointerdown', ()=>{ ensurePermissionAndListen(); }, { once:true });
+    }
+
+    // iOS 13+: Permission erst nach User-Geste einholen; mehrere Hooks nutzen
+    if(typeof DeviceOrientationEvent !== 'undefined' &&
+       typeof DeviceOrientationEvent.requestPermission === 'function'){
+      if(document.readyState === 'complete' || document.readyState === 'interactive') showPermissionPrompt();
+      else window.addEventListener('DOMContentLoaded', showPermissionPrompt, { once:true });
+
+      const kick = async ()=>{ await ensurePermissionAndListen(); };
+      document.addEventListener('pointerdown', kick, { once:true });
+      document.addEventListener('click', kick, { once:true });
+      document.addEventListener('touchend', kick, { once:true });
+      document.getElementById('gpsBtn')?.addEventListener('click', kick, { once:true });
+      document.getElementById('backBtn')?.addEventListener('click', kick, { once:true });
+    } else {
+      ensurePermissionAndListen();
+    }
+  })();
+
+  
+  // Hintergrund: Weiß vor Start, transparent sobald Kamera läuft
+  (function(){
+    const sceneEl = document.querySelector('a-scene');
+    function setTransparent() {
+      if (!sceneEl) return;
+      try { sceneEl.removeAttribute('background'); } catch(e) {}
+      const setAlpha = () => { try { sceneEl.renderer.setClearAlpha(0); } catch(e) {} };
+      if (sceneEl.renderer) setAlpha();
+      else sceneEl.addEventListener('renderstart', setAlpha, { once: true });
+    }
+
+    const mo = new MutationObserver((mutations)=>{
+      for (const m of mutations) {
+        for (const n of m.addedNodes) {
+          if (n && n.nodeName === 'VIDEO') {
+            n.addEventListener('playing', setTransparent, { once: true });
+            n.addEventListener('canplay', setTransparent, { once: true });
+          }
+        }
+      }
+    });
+    try { mo.observe(document.body, { childList: true, subtree: true }); } catch(e) {}
+  })();
+
+  </script>
+  <script src="js/gps-toggle.js"></script>
+</body>
+</html>

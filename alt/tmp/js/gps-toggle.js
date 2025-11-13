@@ -1,9 +1,5 @@
 // xbaulive/js/gps-toggle.js
-// GPS-Umschaltung (Simulation ↔ echtes GPS) für AR.js/A-Frame
-// - Schaltet nur die gps-camera-Attribute an der bestehenden Kamera um (kein DOM-Rebuild der Kamera)
-// - Aktualisiert Status/Buttons und Modellposition je Modus
-// - Hält das Kameravideo auf iOS/Android stabil am Laufen (playsinline/muted/autoplay + auto-resume)
-// - Bindet gps-entity-place nach Umschalten erneut an die gps-camera-Komponente
+// GPS Toggle, Statusanzeige und Hintergrund-Transparenz für AR.js/A-Frame
 
 (function(){
   // ------- GPS Toggle: Simulation ↔ echtes GPS -------
@@ -12,26 +8,13 @@
   const gpsStatus = document.getElementById('gps-status');
 
   // Zielzustände:
-  // - Simulation: gps-camera nutzt simulateLatitude/Longitude, Modell leicht versetzt
-  // - Echt-GPS:   gps-camera nutzt reale Geoposition (watchPosition), Modell bei 0 0 0
+  // - Simulation: Kamera mit simulateLatitude/Longitude, Modell leicht versetzt
+  // - Echt-GPS:   Kamera mit realem watchPosition, Modell bei 0 0 0
 
-  // Zentrale Konfiguration (hier einfach anpassbar)
-  const CONFIG = {
-    sim: {
-      lat: 47.866880722,
-      lon: 12.109128178,
-      modelPosition: '-20 -4 -10'
-    },
-    real: {
-      gpsCameraAttr: 'positionMinAccuracy: 1500; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;',
-      modelPosition: '0 0 0'
-    },
-    labels: { on: 'GPS aus', off: 'GPS ein' }, // Button-Beschriftungen: on = echtes GPS aktiv
-    statusVisibleWhenOn: true                   // Statusanzeige nur bei echtem GPS zeigen
-  };
+  const SIM_LAT = 47.866880722;
+  const SIM_LON = 12.109128178;
 
-  // false = Simulation aktiv, true = echtes GPS aktiv
-  let gpsOn = false;
+  let gpsOn = false; // start: Simulation AUS (also Simulation aktiv)
 
   function getRefs() {
     const cam = document.getElementById('cam');
@@ -62,27 +45,25 @@
 
     if (gpsOn) {
       // ECHTES GPS
-      cam.setAttribute('gps-camera', CONFIG.real.gpsCameraAttr);
-      modelEntity.setAttribute('position', CONFIG.real.modelPosition);
-      if (gpsBtn) gpsBtn.textContent = CONFIG.labels.on;
-      if (gpsStatus) gpsStatus.style.display = CONFIG.statusVisibleWhenOn ? 'flex' : 'none';
+      cam.setAttribute('gps-camera', 'positionMinAccuracy: 1500; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;');
+      modelEntity.setAttribute('position', '0 0 0');
+      gpsBtn.textContent = 'GPS aus';
+      if (gpsStatus) gpsStatus.style.display = 'flex';
     } else {
       // SIMULATION
-      cam.setAttribute('gps-camera', `simulateLatitude: ${CONFIG.sim.lat}; simulateLongitude: ${CONFIG.sim.lon};`);
-      modelEntity.setAttribute('position', CONFIG.sim.modelPosition);
-      if (gpsBtn) gpsBtn.textContent = CONFIG.labels.off;
+      cam.setAttribute('gps-camera', `simulateLatitude: ${SIM_LAT}; simulateLongitude: ${SIM_LON};`);
+      modelEntity.setAttribute('position', '-20 -4 -10');
+      gpsBtn.textContent = 'GPS ein';
       if (gpsStatus) gpsStatus.style.display = 'none';
     }
 
     // Places neu an die (evtl. neu initialisierte) Komponente binden
-    // kurzer Timeout, damit A-Frame die Komponente initialisieren kann
-    setTimeout(() => rebindPlacesToCamera(cam), 0);
+    rebindPlacesToCamera(cam);
 
     // iOS: Nach Permission-Dialog kann das Video pausieren → wieder anstoßen
     resumeVideoIfPaused();
   }
 
-  // Versucht, ein ggf. pausiertes AR.js-Video wieder zum Laufen zu bringen (iOS/Android)
   function resumeVideoIfPaused() {
     const v = document.querySelector('video');
     if (!v) return;
@@ -105,7 +86,6 @@
     } catch(e) {}
   }
 
-  // Verdrahtet das Video mit Keep-Alive-Events, damit es nach Störungen neu anläuft
   function setupVideoKeepAlive(v){
     if (!v || v.__keepAliveSetup) return;
     v.__keepAliveSetup = true;
@@ -137,8 +117,7 @@
     try { mo.observe(document.body, { childList:true, subtree:true }); } catch(e) {}
 
     gpsBtn?.addEventListener('click', () => {
-      // direkt umschalten, Berechtigungsdialog wird vom Browser/AR.js bei Bedarf angezeigt
-      gpsOn = !gpsOn;
+      gpsOn = !gpsOn; // direkt umschalten, Berechtigungsdialog wird vom Browser/AR.js bei Bedarf angezeigt
       applyGPS();
       // Falls Safari/iOS durch Dialog oder Orientierungswechsel pausiert hat
       setTimeout(resumeVideoIfPaused, 300);

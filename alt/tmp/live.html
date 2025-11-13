@@ -103,20 +103,17 @@
   document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
 
 
-    // Anzeige-Korrekturen: iOS-Orientierung + Modell-Scale je Ausrichtung (ein Block)
-    // Hinweise:
-    // - Werte unten in OFFSETS und SCALE anpassen, falls Ausrichtung oder Größe nicht passt.
-    // - Dieser Block ist die einzige Stelle für Orientierung/Skalierung.
+    // iOS-Orientierungsfix & Modell-Scale im Landscape-Modus (kombiniert)
     (function(){
-      // Konfiguration: Korrekturwerte (Grad) und Scale-Faktoren (x y z)
+      // Konfiguration: Korrekturwerte und Scale-Faktoren
       const IOS_ORIENTATION_OFFSETS = {
         'portrait-primary': 90,         // Hochformat, Home-Button unten
         'portrait-secondary': -90,      // Hochformat, Home-Button oben
         'landscape-primary': 0,         // Querformat, Home-Button rechts
         'landscape-secondary': 180      // Querformat, Home-Button links
       };
-      const LANDSCAPE_SCALE = '1.0 1.0 1.0';  // Querformat-Skalierung
-      const PORTRAIT_SCALE  = '0.8 0.8 0.8';  // Hochformat-Skalierung
+      const LANDSCAPE_SCALE = '1.0 1.0 1.0';
+      const PORTRAIT_SCALE = '0.8 0.8 0.8';
 
       // Hilfsfunktionen
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -143,13 +140,13 @@
         return angle === 90 || angle === -90 || angle === 270;
       }
       function applyOrientationAndScale() {
-        // iOS-Orientierung korrigieren (nur auf iOS)
+        // iOS-Orientierungsfix
         if (isIOS && world) {
           const type = getType();
           const offset = IOS_ORIENTATION_OFFSETS[type] || 0;
           world.setAttribute('rotation', `0 ${offset} 0`);
         }
-        // Modell-Skalierung je Ausrichtung
+        // Modell-Scale
         if (model) {
           model.setAttribute('scale', isLandscape() ? LANDSCAPE_SCALE : PORTRAIT_SCALE);
         }

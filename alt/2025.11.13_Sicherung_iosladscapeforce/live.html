@@ -7,6 +7,10 @@
   <meta name="color-scheme" content="light" />
   <link rel="stylesheet" href="style.css" />
   <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
+  <style>
+    .rotate-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#fff;color:#000;z-index:9999;text-align:center;padding:24px;font:600 18px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .rotate-overlay.show{display:flex}
+  </style>
   
    <!-- =======================
        A-Frame + AR.js
@@ -45,6 +49,10 @@
       <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
     </div>
   </header>
+
+  <div id="rotate-overlay" class="rotate-overlay" role="alert" aria-live="assertive">
+    Bitte das Gerät ins Hochformat drehen
+  </div>
 
   <!-- =======================
        Hauptbereich: AR-Szene
@@ -102,64 +110,35 @@
   // Navigation zurück zur Startseite
   document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
 
-
-    // Anzeige-Korrekturen: iOS-Orientierung + Modell-Scale je Ausrichtung (ein Block)
-    // Hinweise:
-    // - Werte unten in OFFSETS und SCALE anpassen, falls Ausrichtung oder Größe nicht passt.
-    // - Dieser Block ist die einzige Stelle für Orientierung/Skalierung.
-    (function(){
-      // Konfiguration: Korrekturwerte (Grad) und Scale-Faktoren (x y z)
-      const IOS_ORIENTATION_OFFSETS = {
-        'portrait-primary': 90,         // Hochformat, Home-Button unten
-        'portrait-secondary': -90,      // Hochformat, Home-Button oben
-        'landscape-primary': 0,         // Querformat, Home-Button rechts
-        'landscape-secondary': 180      // Querformat, Home-Button links
-      };
-      const LANDSCAPE_SCALE = '1.0 1.0 1.0';  // Querformat-Skalierung
-      const PORTRAIT_SCALE  = '0.8 0.8 0.8';  // Hochformat-Skalierung
-
-      // Hilfsfunktionen
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const world = document.getElementById('world-yaw');
-      const model = document.getElementById('modelEntity');
-      if (!world && !model) return;
-
-      const getAngle = () => (screen.orientation && typeof screen.orientation.angle==='number')
-        ? screen.orientation.angle
-        : (typeof window.orientation==='number' ? window.orientation : 0);
-      const normalize = a => { a = ((a%360)+360)%360; if(a>180)a-=360; return a; };
-      function getType() {
-        const a = normalize(getAngle());
-        if(a === 0) return 'portrait-primary';
-        if(Math.abs(a) === 180) return 'portrait-secondary';
-        if(a === 90) return 'landscape-primary';
-        if(a === -90) return 'landscape-secondary';
-        return 'portrait-primary';
+  // iOS: Hochformat erzwingen (statt Rotationskorrektur)
+  (function(){
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(!isIOS) return;
+    const overlay = document.getElementById('rotate-overlay');
+    const content = document.getElementById('content-preview');
+    const isLandscape = () => {
+      if (window.matchMedia) {
+        const mm = window.matchMedia('(orientation: landscape)');
+        if (typeof mm.matches === 'boolean') return mm.matches;
       }
-      function isLandscape() {
-        if (window.matchMedia('(orientation: landscape)').matches) return true;
-        const angle = getAngle();
-        return angle === 90 || angle === -90 || angle === 270;
+      return window.innerWidth > window.innerHeight;
+    };
+    const apply = () => {
+      if (isLandscape()) {
+        if (overlay) overlay.classList.add('show');
+        if (content) content.style.visibility = 'hidden';
+      } else {
+        if (overlay) overlay.classList.remove('show');
+        if (content) content.style.visibility = '';
       }
-      function applyOrientationAndScale() {
-        // iOS-Orientierung korrigieren (nur auf iOS)
-        if (isIOS && world) {
-          const type = getType();
-          const offset = IOS_ORIENTATION_OFFSETS[type] || 0;
-          world.setAttribute('rotation', `0 ${offset} 0`);
-        }
-        // Modell-Skalierung je Ausrichtung
-        if (model) {
-          model.setAttribute('scale', isLandscape() ? LANDSCAPE_SCALE : PORTRAIT_SCALE);
-        }
-      }
-      applyOrientationAndScale();
-      window.addEventListener('orientationchange', applyOrientationAndScale);
-      window.addEventListener('resize', applyOrientationAndScale);
-    })();
+    };
+    apply();
+    window.addEventListener('orientationchange', apply);
+    window.addEventListener('resize', apply);
+  })();
+
   
-
   // Hintergrund: Weiß vor Start, transparent sobald Kamera läuft
   (function(){
     const sceneEl = document.querySelector('a-scene');
@@ -183,7 +162,7 @@
     });
     try { mo.observe(document.body, { childList: true, subtree: true }); } catch(e) {}
   })();
-  
+
   </script>
   <script src="js/gps-toggle.js"></script>
 </body>
