@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Erklärung des JavaScript in live.html</title>
+<style>
+ body { font-family: system-ui, Arial, sans-serif; line-height: 1.45; margin: 2rem; max-width: 880px; }
+ h1,h2,h3 { line-height: 1.2; }
+ code { background:#f5f5f5; padding:2px 4px; border-radius:4px; font-size:90%; }
+ pre { background:#f5f5f5; padding:0.75rem 1rem; overflow:auto; border-radius:6px; }
+ .block { margin-bottom:2.2rem; }
+ .small { font-size:0.85rem; color:#444; }
+</style>
+</head>
+<body>
+<h1>Ausführliche Erklärung des JavaScript in <code>live.html</code></h1>
+<p>Dieses Dokument erklärt jede funktionale Einheit des eingebetteten Skripts in <code>live.html</code>. Ziel ist, zu verstehen: <strong>Navigationslogik</strong>, <strong>Orientierungs-/Skalierungsanpassung</strong>, <strong>Transparenz der Szene</strong>, sowie verwendete <strong>APIs und Fallbacks</strong>.</p>
+<hr>
+<h2>1. Navigation zurück zur Startseite</h2>
+<pre><code>document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');</code></pre>
+<div class="block">
+<ul>
+ <li><code>document.getElementById('backBtn')</code>: Sucht den Button mit ID <code>backBtn</code>.</li>
+ <li><code>?.</code> (optional chaining): Verhindert Fehler, falls das Element nicht existiert.</li>
+ <li>Bei Klick: Weiterleitung zur Startseite mit Query-Parameter <code>hideSensorPopup=1</code> (vermutlich um ein Popup zu unterdrücken).</li>
+</ul>
+</div>
+<h2>2. Selbstaufrufender Block für Orientierung & Skalierung</h2>
+<pre><code>(function(){ ... })();</code></pre>
+<p>Ein IIFE (Immediately Invoked Function Expression), verhindert globale Variablen-Lecks und kapselt Logik.</p>
+<h3>2.1 Konfiguration</h3>
+<pre><code>const IOS_OFFSETS = { 'portrait-primary': 0, 'portrait-secondary': 180, 'landscape-primary': 90, 'landscape-secondary': -90 };
+const LANDSCAPE_SCALE = '1.0 1.0 1.0';
+const PORTRAIT_SCALE  = '0.8 0.8 0.8';</code></pre>
+<ul>
+ <li><code>IOS_OFFSETS</code>: Korrekturwerte (Yaw-Rotation in Grad) um iOS-spezifische Orientierungsmapping-Probleme auszugleichen.</li>
+ <li><code>LANDSCAPE_SCALE</code> / <code>PORTRAIT_SCALE</code>: Unterschiedliche Modellgrößen je Ausrichtung für visuelle Optimierung.</li>
+</ul>
+<h3>2.2 Geräteerkennung</h3>
+<pre><code>const ua = navigator.userAgent;
+const isIPad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isIPhone = /iPhone/.test(ua) && !isIPad;
+const isIOS = isIPad || isIPhone;</code></pre>
+<ul>
+ <li><strong>Zweck:</strong> Erkennen, ob iOS-Gerät vorliegt (wegen abweichendem Orientation-Verhalten & Permission-Politik).</li>
+ <li><code>MacIntel + maxTouchPoints > 1</code>: Erfasst iPadOS, das sich manchmal als Mac meldet.</li>
+</ul>
+<h3>2.3 DOM-Referenzen & Schutz</h3>
+<pre><code>const world = document.getElementById('world-yaw');
+const model = document.getElementById('modelEntity');
+if (!world && !model) return;</code></pre>
+<ul>
+ <li><code>world</code>: Container-Entity, deren Rotation (Yaw) korrigiert wird.</li>
+ <li><code>model</code>: 3D-Modell, dessen Skalierung dynamisch angepasst wird.</li>
+ <li>Früher Exit: Wenn beides fehlt, macht die Orientierungskalibrierung keinen Sinn.</li>
+</ul>
+<h3>2.4 Winkelermittlung (Screen Orientation API + Fallback)</h3>
+<pre><code>const getAngle = () => (screen.orientation && typeof screen.orientation.angle==='number')
+  ? screen.orientation.angle
+  : (typeof window.orientation==='number' ? window.orientation : 0);</code></pre>
+<ul>
+ <li><strong>Primär:</strong> <code>screen.orientation.angle</code> (moderne Browser).</li>
+ <li><strong>Fallback:</strong> <code>window.orientation</code> (ältere Safari/iOS).</li>
+ <li><strong>Fallback 2:</strong> <code>0</code>, falls nichts verfügbar.</li>
+ <li><strong>Hinweis:</strong> Bei deaktiviertem Auto-Rotate bleiben diese Werte konstant.</li>
+</ul>
+<h3>2.5 Normalisierung</h3>
+<pre><code>const normalize = a => { a = ((a%360)+360)%360; if(a>180)a-=360; return a; };</code></pre>
+<ul>
+ <li>Bringt beliebige Winkel zuverlässig in Bereich <code>[-180, 180]</code>.</li>
+ <li>Vermeidet Vergleichsprobleme (z. B. 270° → -90°).</li>
+</ul>
+<h3>2.6 Orientierungstyp bestimmen</h3>
+<pre><code>function getType() {
+  const a = normalize(getAngle());
+  if(a === 0) return 'portrait-primary';
+  if(Math.abs(a) === 180) return 'portrait-secondary';
+  if(a === 90) return 'landscape-primary';
+  if(a === -90) return 'landscape-secondary';
+  return 'portrait-primary';
+}</code></pre>
+<ul>
+ <li>Mapping von normalisiertem Winkel auf semantische Orientierung.</li>
+ <li><code>portrait-secondary</code> wird bei 180° oder -180° gesetzt.</li>
+ <li>Default-Fallback: <code>portrait-primary</code> (Robustheit bei nicht erkannten Werten).</li>
+</ul>
+<h3>2.7 Querformat-Erkennung</h3>
+<pre><code>function isLandscape() {
+  if (window.matchMedia('(orientation: landscape)').matches) return true;
+  const angle = getAngle();
+  return angle === 90 || angle === -90 || angle === 270;
+}</code></pre>
+<ul>
+ <li><strong>Zuerst:</strong> CSS-Media-Query (Viewport-Einschätzung).</li>
+ <li><strong>Fallback:</strong> Numerische Winkelprüfung (inkl. 270° → links gedreht).</li>
+ <li><strong>Einschränkung:</strong> Funktion reagiert nicht auf physische Drehung bei gesperrter Bildschirmrotation.</li>
+</ul>
+<h3>2.8 Anwendung von Orientierung & Skalierung</h3>
+<pre><code>function applyOrientationAndScale() {
+  if (isIOS && world) {
+    const type = getType();
+    const offset = IOS_OFFSETS[type] || 0;
+    world.setAttribute('rotation', `0 ${offset} 0`);
+  }
+  if (model) {
+    model.setAttribute('scale', isLandscape() ? LANDSCAPE_SCALE : PORTRAIT_SCALE);
+  }
+}</code></pre>
+<ul>
+ <li><strong>iOS-Korrektur:</strong> Rotation der Welt-Entity kompensiert abweichende Yaw-Ausrichtung (z. B. Safari liefert gelegentlich inkonsistente Winkel).</li>
+ <li><strong>Skalierungslogik:</strong> Größeres Modell im Landscape, kleiner im Portrait für bessere Platznutzung.</li>
+ <li><strong>Seiteneffekte:</strong> Keine Animationslogik; rein statisches Setzen der Attribute.</li>
+</ul>
+<h3>2.9 Event-Registrierung</h3>
+<pre><code>applyOrientationAndScale();
+window.addEventListener('orientationchange', applyOrientationAndScale);
+window.addEventListener('resize', applyOrientationAndScale);</code></pre>
+<ul>
+ <li><strong>Initial:</strong> Direkt nach Laden angewandt.</li>
+ <li><strong>Events:</strong> Reaktion bei echter Orientierung (<code>orientationchange</code>) und Resize (Browser-UI/Viewport-Anpassungen).</li>
+ <li><strong>Grenzen:</strong> Auf gesperrten Geräten (Rotation-Lock) feuert <code>orientationchange</code> nicht; dann nur <code>resize</code> bei Layoutänderungen.</li>
+</ul>
+<hr>
+<h2>3. Transparenzsteuerung der A-Frame Szene</h2>
+<p>Block sorgt dafür, dass nach Kamerastart der weiße Hintergrund entfernt und Alphakanal gesetzt wird.</p>
+<pre><code>(function(){
+  const sceneEl = document.querySelector('a-scene');
+  function setTransparent() {
+    if (!sceneEl) return;
+    try { sceneEl.removeAttribute('background'); } catch(e) {}
+    const setAlpha = () => { try { sceneEl.renderer.setClearAlpha(0); } catch(e) {} };
+    if (sceneEl.renderer) setAlpha();
+    else sceneEl.addEventListener('renderstart', setAlpha, { once: true });
+  }
+  const mo = new MutationObserver((mutations)=>{
+    for (const m of mutations) {
+      for (const n of m.addedNodes) {
+        if (n && n.nodeName === 'VIDEO') {
+          n.addEventListener('playing', setTransparent, { once: true });
+          n.addEventListener('canplay', setTransparent, { once: true });
+        }
+      }
+    }
+  });
+  try { mo.observe(document.body, { childList: true, subtree: true }); } catch(e) {}
+})();</code></pre>
+<ul>
+ <li><strong>Ziel:</strong> Entfernt den weißen Hintergrund, sobald Webcam-Video verfügbar ist → AR-Eindruck.</li>
+ <li><code>MutationObserver</code>: Lauscht auf neu hinzugefügte <code>&lt;video&gt;</code>-Elemente (von AR.js erzeugt).</li>
+ <li><code>playing</code> / <code>canplay</code> Events: Zeitpunkt, an dem sicher Transparenz gesetzt werden kann.</li>
+ <li><code>renderer.setClearAlpha(0)</code>: Setzt den WebGL Clear Alpha-Wert auf 0 (voll transparent).</li>
+ <li><strong>Fehler-Toleranz:</strong> Try/Catch-Blöcke verhindern Abbruch bei Race Conditions.</li>
+</ul>
+<hr>
+<h2>4. Architektur & Design-Entscheidungen</h2>
+<ul>
+ <li><strong>Isolation durch IIFE:</strong> Verhindert globale Namenskollisionen (gut für Einbettung in AR-Seiten).</li>
+ <li><strong>Defensive Checks:</strong> Optional Chaining und Existenzprüfungen vermeiden Laufzeitfehler auf älteren oder exotischen Browsern.</li>
+ <li><strong>Keine Sensor-Permission:</strong> Es wird keine <code>DeviceOrientation</code> oder <code>DeviceMotion</code> genutzt; dadurch beschränkt auf UI-orientierte Winkel.</li>
+ <li><strong>Kompakte Ternary-Ausdrücke:</strong> Minimieren Code, erhöhen aber Lernkurve (wurden hier erläutert).</li>
+</ul>
+<hr>
+<h2>5. Mögliche Erweiterungen</h2>
+<ul>
+ <li><strong>Sensor-Fallback:</strong> Nutzung von <code>DeviceOrientationEvent</code> bei gesperrter Bildschirmrotation, um physische Lage zu schätzen.</li>
+ <li><strong>Debounce:</strong> Verhindern übermäßiger Skalierungs-Neuberechnungen bei schnellen <code>resize</code>-Events.</li>
+ <li><strong>Sanfte Übergänge:</strong> Animiertes Umskalieren (CSS-Transition oder A-Frame Animation-Component).</li>
+ <li><strong>Logging:</strong> Debug-Ausgabe für Winkel & Typ zur Laufzeit.</li>
+</ul>
+<hr>
+<h2>6. Zusammenfassung</h2>
+<p>Das Skript kombiniert einfache Geräte- und Orientierungsheuristiken mit spezifischen iOS-Korrekturen, um ein konsistentes AR-Modell-Rendering zu liefern und gleichzeitig den Hintergrund nach Videostart transparent zu setzen. Es nutzt Standard-Web-APIs (<code>screen.orientation</code>, <code>matchMedia</code>, <code>MutationObserver</code>) und bleibt ohne externe Abhängigkeiten.</p>
+<hr>
+<p class="small">Um dieses Dokument als PDF zu speichern: Im Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
+</body>
+</html>
