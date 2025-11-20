@@ -103,15 +103,23 @@
   document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
 
 
- // Anzeige-Korrekturen: iOS-Orientierung (einheitlich für iPhone/iPad) + Modell-Scale je Ausrichtung
+ // Anzeige-Korrekturen: iOS-Orientierung (separate Offsets für iPhone/iPad) + Modell-Scale je Ausrichtung
 
     (function(){
       // Konfiguration: Korrekturwerte (Grad) und Scale-Faktoren (x y z)
-      const IOS_OFFSETS = {
+      // iPhone-spezifische Offsets (anpassbar)
+      const IPHONE_OFFSETS = {
         'portrait-primary': 0,
         'portrait-secondary': 180,
         'landscape-primary': 90,
         'landscape-secondary': -90
+      };
+      // iPad-spezifische Offsets (anpassbar)
+      const IPAD_OFFSETS = {
+        'portrait-primary': 90,
+        'portrait-secondary': -90,
+        'landscape-primary': 0,
+        'landscape-secondary': 180
       };
       const LANDSCAPE_SCALE = '1.0 1.0 1.0';  // Querformat-Skalierung
       const PORTRAIT_SCALE  = '0.8 0.8 0.8';  // Hochformat-Skalierung
@@ -143,11 +151,11 @@
         return angle === 90 || angle === -90 || angle === 270;
       }
       function applyOrientationAndScale() {
-        // iOS-Orientierung korrigieren (iPhone/iPad spezifische Offsets)
-        if (isIOS && world) {
+        // Rotation nur für iOS-Geräte anwenden
+        if (world && (isIPhone || isIPad)) {
           const type = getType();
-          const offset = IOS_OFFSETS[type] || 0;
-          world.setAttribute('rotation', `0 ${offset} 0`);
+          const offsets = isIPhone ? IPHONE_OFFSETS : IPAD_OFFSETS;
+          world.setAttribute('rotation', `0 ${(offsets[type] || 0)} 0`);
         }
         // Modell-Skalierung je Ausrichtung
         if (model) {

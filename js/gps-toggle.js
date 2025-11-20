@@ -23,7 +23,7 @@
       modelPosition: '-20 -4 -10'
     },
     real: {
-      gpsCameraAttr: 'positionMinAccuracy: 1500; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;',
+      gpsCameraAttr: 'positionMinAccuracy: 50; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;',
       modelPosition: '0 0 0'
     },
     labels: { on: 'GPS aus', off: 'GPS ein' }, // Button-Beschriftungen: on = echtes GPS aktiv
