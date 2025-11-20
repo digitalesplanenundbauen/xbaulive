@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Technologiepark & Studierendenzentrum – Live AR-Modus</title>
+  
+   <!-- =======================
+       A-Frame + AR.js
+       ======================= -->
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+  
+  <!-- Statistik Deviora -->
+  <script>
+    var _paq = window._paq = window._paq || [];
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+      var u="//stats.deviora.de/";
+      _paq.push(['setTrackerUrl', u+'matomo.php']);
+      _paq.push(['setSiteId', '2']);
+      var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+      g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+    })();
+  </script>
+
+</head>
+
+<body>
+  <!-- =======================
+       Kopfzeile
+       ======================= -->
+  <header>
+    <div class="header-inner">
+      <div class="site-title" aria-label="Projektname">
+        Technologiepark <br>
+        &amp; Studierendenzentrum
+      </div>
+      <img class="logo" src="./images/thlogoweiss.svg" alt="Logo" />
+    </div>
+  </header>
+
+  <!-- =======================
+       Hauptbereich: AR-Szene
+       ======================= -->
+  <main class="main-transparent">
+
+  <!-- GPS-Statusanzeige fixiert am  rechten Bildschirmrand -->
+    <div id="gps-status">
+      <span class="gps-status-dot"></span>
+      <span class="gps-status-text">GPS aktiviert</span>
+    </div>
+
+    <div id="content-preview">
+      <a-scene
+      background="color: white"
+      renderer="logarithmicDepthBuffer: true; alpha: true;"
+      loading-screen="enabled: false;"
+      xr-mode-ui="enabled: false"
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
+      >
+        <!-- GLB aus Assets -->
+        <a-assets>
+          <a-asset-item id="animated-asset" src="./assets/gameobjectohnekellerreduziert.glb"></a-asset-item>
+        </a-assets>
+        <!-- Welt-Node + Geoposition -->
+        <a-entity id="world-yaw" rotation="0 0 0">
+          <a-entity gps-entity-place="latitude: 47.867615758; longitude: 12.109218307;">
+            <a-entity id="modelEntity" gltf-model="#animated-asset" scale="0.8 0.8 0.8" position="-20 -4 -10"></a-entity>
+          </a-entity>
+        </a-entity>
+        <!-- Kamera (Simulation an / echtes GPS per Button) -->
+        <a-camera id="cam" gps-camera="simulateLatitude: 47.866880722; simulateLongitude: 12.109128178;" rotation-reader></a-camera>
+      </a-scene>
+    </div>
+  </main>
+
+  <!-- =======================
+       Fußzeile
+       ======================= -->
+  <footer>
+    <div class="footer-top">
+      <button class="footer-btn" id="backBtn">Zurück</button>
+      <button class="footer-btn" id="gpsBtn">GPS ein</button>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-lab"><strong>Labor für digitales Planen und Bauen</strong> – Raum S 0.36</span>
+    </div>
+  </footer>
+
+  <!-- =======================
+       Interaktion & Funktion
+       ======================= -->
+<script>
+
+  // Navigation zurück zur Startseite
+  document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');
+
+
+ // Anzeige-Korrekturen: iOS-Orientierung (separate Offsets für iPhone/iPad) + Modell-Scale je Ausrichtung
+
+    (function(){
+      // Konfiguration: Korrekturwerte (Grad) und Scale-Faktoren (x y z)
+      // iPhone-spezifische Offsets (anpassbar)
+      const IPHONE_OFFSETS = {
+        'portrait-primary': 0,
+        'portrait-secondary': 180,
+        'landscape-primary': 90,
+        'landscape-secondary': -90
+      };
+      // iPad-spezifische Offsets (anpassbar)
+      const IPAD_OFFSETS = {
+        'portrait-primary': 90,
+        'portrait-secondary': -90,
+        'landscape-primary': 0,
+        'landscape-secondary': 180
+      };
+      const LANDSCAPE_SCALE = '1.0 1.0 1.0';  // Querformat-Skalierung
+      const PORTRAIT_SCALE  = '0.8 0.8 0.8';  // Hochformat-Skalierung
+
+      // Hilfsfunktionen
+      const ua = navigator.userAgent;
+      const isIPad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isIPhone = /iPhone/.test(ua) && !isIPad;
+      const isIOS = isIPad || isIPhone;
+      const world = document.getElementById('world-yaw');
+      const model = document.getElementById('modelEntity');
+      if (!world && !model) return;
+
+      const getAngle = () => (screen.orientation && typeof screen.orientation.angle==='number')
+        ? screen.orientation.angle
+        : (typeof window.orientation==='number' ? window.orientation : 0);
+      const normalize = a => { a = ((a%360)+360)%360; if(a>180)a-=360; return a; };
+      function getType() {
+        const a = normalize(getAngle());
+        if(a === 0) return 'portrait-primary';
+        if(Math.abs(a) === 180) return 'portrait-secondary';
+        if(a === 90) return 'landscape-primary';
+        if(a === -90) return 'landscape-secondary';
+        return 'portrait-primary';
+      }
+      function isLandscape() {
+        if (window.matchMedia('(orientation: landscape)').matches) return true;
+        const angle = getAngle();
+        return angle === 90 || angle === -90 || angle === 270;
+      }
+      function applyOrientationAndScale() {
+        // Rotation nur für iOS-Geräte anwenden
+        if (world && (isIPhone || isIPad)) {
+          const type = getType();
+          const offsets = isIPhone ? IPHONE_OFFSETS : IPAD_OFFSETS;
+          world.setAttribute('rotation', `0 ${(offsets[type] || 0)} 0`);
+        }
+        // Modell-Skalierung je Ausrichtung
+        if (model) {
+          model.setAttribute('scale', isLandscape() ? LANDSCAPE_SCALE : PORTRAIT_SCALE);
+        }
+      }
+      applyOrientationAndScale();
+      window.addEventListener('orientationchange', applyOrientationAndScale);
+      window.addEventListener('resize', applyOrientationAndScale);
+    })();
+  
+
+  // Hintergrund: Weiß vor Start, transparent sobald Kamera läuft
+  (function(){
+    const sceneEl = document.querySelector('a-scene');
+    function setTransparent() {
+      if (!sceneEl) return;
+      try { sceneEl.removeAttribute('background'); } catch(e) {}
+      const setAlpha = () => { try { sceneEl.renderer.setClearAlpha(0); } catch(e) {} };
+      if (sceneEl.renderer) setAlpha();
+      else sceneEl.addEventListener('renderstart', setAlpha, { once: true });
+    }
+
+    const mo = new MutationObserver((mutations)=>{
+      for (const m of mutations) {
+        for (const n of m.addedNodes) {
+          if (n && n.nodeName === 'VIDEO') {
+            n.addEventListener('playing', setTransparent, { once: true });
+            n.addEventListener('canplay', setTransparent, { once: true });
+          }
+        }
+      }
+    });
+    try { mo.observe(document.body, { childList: true, subtree: true }); } catch(e) {}
+  })();
+  
+  </script>
+  <script src="js/gps-toggle.js"></script>
+</body>
+</html>
