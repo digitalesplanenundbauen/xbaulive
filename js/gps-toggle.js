@@ -20,14 +20,17 @@
     sim: {
       lat: 47.866880722,
       lon: 12.109128178,
-      modelPosition: '-20 -4 -10'
+      modelPosition: '-20 -4 -10',
+      title: 'Technologiepark & Studierendenzentrum – Live AR-Modus - Simulation',
+      buttonLabel: 'GPS ein' // In Simulation: Button ermöglicht Einschalten von echtem GPS
     },
     real: {
       gpsCameraAttr: 'positionMinAccuracy: 50; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;',
-      modelPosition: '0 0 0'
+      modelPosition: '0 0 0',
+      title: 'Technologiepark & Studierendenzentrum – Live AR-Modus - GPS Aktiv',
+      buttonLabel: 'GPS aus' // Bei echtem GPS: Button schaltet zurück zur Simulation
     },
-    labels: { on: 'GPS aus', off: 'GPS ein' }, // Button-Beschriftungen: on = echtes GPS aktiv
-    statusVisibleWhenOn: true                   // Statusanzeige nur bei echtem GPS zeigen
+    statusVisibleWhenOn: true // Statusanzeige nur bei echtem GPS zeigen
   };
 
   // false = Simulation aktiv, true = echtes GPS aktiv
@@ -64,14 +67,18 @@
       // ECHTES GPS
       cam.setAttribute('gps-camera', CONFIG.real.gpsCameraAttr);
       modelEntity.setAttribute('position', CONFIG.real.modelPosition);
-      if (gpsBtn) gpsBtn.textContent = CONFIG.labels.on;
+      if (gpsBtn) gpsBtn.textContent = CONFIG.real.buttonLabel;
       if (gpsStatus) gpsStatus.style.display = CONFIG.statusVisibleWhenOn ? 'flex' : 'none';
+      // Seitentitel aktualisieren bei aktiviertem echtem GPS
+      try { document.title = CONFIG.real.title; } catch(e) {}
     } else {
       // SIMULATION
       cam.setAttribute('gps-camera', `simulateLatitude: ${CONFIG.sim.lat}; simulateLongitude: ${CONFIG.sim.lon};`);
       modelEntity.setAttribute('position', CONFIG.sim.modelPosition);
-      if (gpsBtn) gpsBtn.textContent = CONFIG.labels.off;
+      if (gpsBtn) gpsBtn.textContent = CONFIG.sim.buttonLabel;
       if (gpsStatus) gpsStatus.style.display = 'none';
+      // Seitentitel zurücksetzen auf Simulation
+      try { document.title = CONFIG.sim.title; } catch(e) {}
     }
 
     // Places neu an die (evtl. neu initialisierte) Komponente binden
