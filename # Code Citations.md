@@ -1,29 +1,19 @@
 # Code Citations
 
-## License: unknown
-https://github.com/naoto-github/naoto-github.github.io/tree/ae8b6d3603c1898e72cc9e0ea59dd7d56775dc46/application/AR/index.html
+This project does not include verbatim code copied from third‑party repositories. It uses the following libraries via CDN:
 
-```
-doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <script src="https://aframe.io/
-```
+- A‑Frame (v1.7.1)
+  - CDN: `https://aframe.io/releases/1.7.1/aframe.min.js`
+  - License: MIT
+  - License URL: https://github.com/aframevr/aframe/blob/master/LICENSE
 
+- AR.js (v3.4.7)
+  - CDN: `https://raw.githack.com/AR-js-org/AR.js/3.4.7/three.js/build/ar-threex-location-only.js`
+  - CDN: `https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js`
+  - License: MIT
+  - License URL: https://github.com/AR-js-org/AR.js/blob/master/LICENSE
 
-## License: unknown
-https://github.com/andrewstrel/andrewstrel.github.io/tree/a8bf784386cbaf0e0b830fe11563a25cf03c75ce/index.html
-
-```
-script>
-</head>
-<body style="margin: 0; overflow: hidden;">
-  <a-scene
-    renderer="logarithmicDepthBuffer: true;"
-    embedded
-    loading-screen="enabled: false;"
-    vr-mode-ui="enabled: false"
-```
+Notes:
+- Common patterns for A‑Frame scene setup and renderer options are implemented independently and do not constitute copied code.
+- If future contributions include code adapted from external sources, please add precise citations: repository, commit hash, file path, license, and a brief description of what was adapted and where it appears (e.g., `index.html` lines / function names).
 

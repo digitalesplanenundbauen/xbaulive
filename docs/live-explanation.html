@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Erklärung zur Seite live.html</title>
+<style>
+ body { font-family: system-ui, Arial, sans-serif; line-height: 1.45; margin: 2rem; max-width: 880px; }
+ h1,h2,h3 { line-height: 1.2; }
+ code { background:#f5f5f5; padding:2px 4px; border-radius:4px; font-size:90%; }
+ pre { background:#f5f5f5; padding:0.75rem 1rem; overflow:auto; border-radius:6px; }
+ .small { font-size:0.85rem; color:#444; }
+</style>
+</head>
+<body>
+<h1>Ausführliche Erklärung der Datei <code>live.html</code></h1>
+<p>Diese Datei stellt den Live‑AR‑Modus bereit: A‑Frame + AR.js, GPS‑Platzierung des Modells und eine Umschaltung zwischen Simulations‑GPS und echtem GPS. Unten findest du die Struktur und eine Kurzbeschreibung der eingebundenen Skripte.</p>
+
+<hr>
+<h2>1. Kopfbereich (Head)</h2>
+<ul>
+  <li><strong>Meta &amp; Viewport:</strong> Setzt <code>charset</code>, deaktiviert Nutzer‑Zoom für stabile UI.</li>
+  <li><strong>Noindex:</strong> <code>robots=noindex</code> verhindert Suchmaschinen‑Indexierung.</li>
+  <li><strong>Stylesheet:</strong> <code>style.css</code> für Layout/Komponenten.</li>
+  <li><strong>A‑Frame:</strong> <code>aframe.min.js</code> (v1.7.1).</li>
+  <li><strong>AR.js:</strong> Einbindung von <code>ar-threex-location-only.js</code> und <code>aframe-ar.js</code> für Location‑basiertes AR.</li>
+</ul>
+<p class="small">Stylesheet‑Erklärung: <a href="style-explanation.html">docs/style-explanation.html</a></p>
+
+<hr>
+<h2>2. Kopfzeile (Header)</h2>
+<ul>
+  <li><strong>Struktur:</strong> Projekttitel und Logo (<code>images/thlogoweiss.svg</code>).</li>
+</ul>
+
+<hr>
+<h2>3. Hauptbereich (Main) mit AR‑Szene</h2>
+<ul>
+  <li><strong>Statusbox:</strong> <code>#gps-status</code> zeigt GPS‑Status/Genauigkeit an.</li>
+  <li><strong>Szene:</strong> <code>&lt;a-scene&gt;</code> mit <code>renderer="...; alpha: true"</code> und <code>arjs</code>‑Attribut für Webcam‑Quelle.</li>
+  <li><strong>Assets:</strong> GLB unter <code>./assets/gameobjectohnekellerreduziert.glb</code> via <code>&lt;a-assets&gt;</code>.</li>
+  <li><strong>GPS‑Platzierung:</strong> <code>gps-entity-place</code> setzt die Geokoordinaten für das Modell.</li>
+  <li><strong>Welt‑Yaw:</strong> <code>#world-yaw</code> als Container zur iOS‑spezifischen Rotationskorrektur.</li>
+  <li><strong>Modell‑Entity:</strong> <code>#modelEntity</code> mit <code>gltf-model</code>, initialer <code>scale</code> und <code>position</code>.</li>
+  <li><strong>Kamera:</strong> <code>#cam</code> mit <code>gps-camera</code> – initial Simulation mit <code>simulateLatitude</code>/<code>simulateLongitude</code>.</li>
+</ul>
+
+<hr>
+<h2>4. Fußbereich (Footer)</h2>
+<ul>
+  <li><strong>Buttons:</strong> <code>#backBtn</code> (zurück zur Startseite) und <code>#gpsBtn</code> (GPS ein/aus).</li>
+  <li><strong>Info:</strong> Labor‑Hinweis in der unteren Zeile.</li>
+</ul>
+
+<hr>
+<h2>5. Inline‑Skripte: Kurzüberblick</h2>
+<ul>
+  <li><strong>Navigation:</strong> <code>#backBtn</code> leitet zu <code>index.html?hideSensorPopup=1</code> weiter.</li>
+  <li><strong>iOS‑Orientation &amp; Scale:</strong> Getrennte Offsets für iPhone/iPad; Modell‑Skalierung nach Portrait/Landscape.</li>
+  <li><strong>Transparenz:</strong> Entfernt weißen Hintergrund und setzt <code>renderer.setClearAlpha(0)</code>, sobald das Video startet.</li>
+</ul>
+<p class="small">Die vollständige Erläuterung der Inline‑Skripte: <a href="live-js-explanation.html">docs/live-js-explanation.html</a></p>
+
+<hr>
+<h2>6. Externes Skript: GPS‑Umschaltung</h2>
+<pre><code>&lt;script src="js/gps-toggle.js"&gt;&lt;/script&gt;</code></pre>
+<ul>
+  <li><strong>Funktion:</strong> Umschalten zwischen Simulations‑GPS und echtem GPS, Rebinding von <code>gps-entity-place</code>, Video‑Keep‑Alive.</li>
+  <li><strong>UI:</strong> Aktualisiert <code>#gpsBtn</code> und <code>#gps-status</code>, passt Titel und Modellposition an.</li>
+</ul>
+<p class="small">Details zur GPS‑Umschaltung: <a href="gps-toggle-js-explanation.html">docs/gps-toggle-js-explanation.html</a></p>
+
+<hr>
+<p class="small">Um dieses Dokument als PDF zu speichern: Im Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
+</body>
+</html>

@@ -15,7 +15,6 @@
 <body>
 <h1>Ausführliche Erklärung des JavaScript in <code>live.html</code></h1>
 <p>Dieses Dokument erklärt jede funktionale Einheit des eingebetteten Skripts in <code>live.html</code>. Ziel ist, zu verstehen: <strong>Navigationslogik</strong>, <strong>Orientierungs-/Skalierungsanpassung</strong>, <strong>Transparenz der Szene</strong>, sowie verwendete <strong>APIs und Fallbacks</strong>.</p>
- 
 <hr>
 <h2>1. Navigation zurück zur Startseite</h2>
 <pre><code>document.getElementById('backBtn')?.addEventListener('click',()=>location.href='index.html?hideSensorPopup=1');</code></pre>
@@ -30,22 +29,11 @@
 <pre><code>(function(){ ... })();</code></pre>
 <p>Ein IIFE (Immediately Invoked Function Expression), verhindert globale Variablen-Lecks und kapselt Logik.</p>
 <h3>2.1 Konfiguration</h3>
-<pre><code>const IPHONE_OFFSETS = {
-  'portrait-primary': 0,
-  'portrait-secondary': 180,
-  'landscape-primary': 90,
-  'landscape-secondary': -90
-};
-const IPAD_OFFSETS = {
-  'portrait-primary': 90,
-  'portrait-secondary': -90,
-  'landscape-primary': 0,
-  'landscape-secondary': 180
-};
+<pre><code>const IOS_OFFSETS = { 'portrait-primary': 0, 'portrait-secondary': 180, 'landscape-primary': 90, 'landscape-secondary': -90 };
 const LANDSCAPE_SCALE = '1.0 1.0 1.0';
 const PORTRAIT_SCALE  = '0.8 0.8 0.8';</code></pre>
 <ul>
- <li><code>IPHONE_OFFSETS</code> / <code>IPAD_OFFSETS</code>: Gerätespezifische Yaw-Korrekturwerte zur Kompensation unterschiedlicher Orientierungsmappings zwischen iPhone und iPad.</li>
+ <li><code>IOS_OFFSETS</code>: Korrekturwerte (Yaw-Rotation in Grad) um iOS-spezifische Orientierungsmapping-Probleme auszugleichen.</li>
  <li><code>LANDSCAPE_SCALE</code> / <code>PORTRAIT_SCALE</code>: Unterschiedliche Modellgrößen je Ausrichtung für visuelle Optimierung.</li>
 </ul>
 <h3>2.2 Geräteerkennung</h3>
@@ -109,19 +97,17 @@ if (!world && !model) return;</code></pre>
 </ul>
 <h3>2.8 Anwendung von Orientierung & Skalierung</h3>
 <pre><code>function applyOrientationAndScale() {
-  // Rotation nur für iOS-Geräte anwenden und je Gerätetyp andere Offsets nutzen
-  if (world && (isIPhone || isIPad)) {
+  if (isIOS && world) {
     const type = getType();
-    const offsets = isIPhone ? IPHONE_OFFSETS : IPAD_OFFSETS;
-    world.setAttribute('rotation', `0 ${(offsets[type] || 0)} 0`);
+    const offset = IOS_OFFSETS[type] || 0;
+    world.setAttribute('rotation', `0 ${offset} 0`);
   }
-  // Modell-Skalierung je Ausrichtung
   if (model) {
     model.setAttribute('scale', isLandscape() ? LANDSCAPE_SCALE : PORTRAIT_SCALE);
   }
 }</code></pre>
 <ul>
- <li><strong>iOS-Korrektur:</strong> Rotation der Welt-Entity kompensiert abweichende Yaw-Ausrichtung; die Offsets sind <em>getrennt</em> für iPhone und iPad definiert.</li>
+ <li><strong>iOS-Korrektur:</strong> Rotation der Welt-Entity kompensiert abweichende Yaw-Ausrichtung (z. B. Safari liefert gelegentlich inkonsistente Winkel).</li>
  <li><strong>Skalierungslogik:</strong> Größeres Modell im Landscape, kleiner im Portrait für bessere Platznutzung.</li>
  <li><strong>Seiteneffekte:</strong> Keine Animationslogik; rein statisches Setzen der Attribute.</li>
 </ul>
@@ -165,6 +151,25 @@ window.addEventListener('resize', applyOrientationAndScale);</code></pre>
  <li><code>renderer.setClearAlpha(0)</code>: Setzt den WebGL Clear Alpha-Wert auf 0 (voll transparent).</li>
  <li><strong>Fehler-Toleranz:</strong> Try/Catch-Blöcke verhindern Abbruch bei Race Conditions.</li>
 </ul>
+<hr>
+<h2>4. Architektur & Design-Entscheidungen</h2>
+<ul>
+ <li><strong>Isolation durch IIFE:</strong> Verhindert globale Namenskollisionen (gut für Einbettung in AR-Seiten).</li>
+ <li><strong>Defensive Checks:</strong> Optional Chaining und Existenzprüfungen vermeiden Laufzeitfehler auf älteren oder exotischen Browsern.</li>
+ <li><strong>Keine Sensor-Permission:</strong> Es wird keine <code>DeviceOrientation</code> oder <code>DeviceMotion</code> genutzt; dadurch beschränkt auf UI-orientierte Winkel.</li>
+ <li><strong>Kompakte Ternary-Ausdrücke:</strong> Minimieren Code, erhöhen aber Lernkurve (wurden hier erläutert).</li>
+</ul>
+<hr>
+<h2>5. Mögliche Erweiterungen</h2>
+<ul>
+ <li><strong>Sensor-Fallback:</strong> Nutzung von <code>DeviceOrientationEvent</code> bei gesperrter Bildschirmrotation, um physische Lage zu schätzen.</li>
+ <li><strong>Debounce:</strong> Verhindern übermäßiger Skalierungs-Neuberechnungen bei schnellen <code>resize</code>-Events.</li>
+ <li><strong>Sanfte Übergänge:</strong> Animiertes Umskalieren (CSS-Transition oder A-Frame Animation-Component).</li>
+ <li><strong>Logging:</strong> Debug-Ausgabe für Winkel & Typ zur Laufzeit.</li>
+</ul>
+<hr>
+<h2>6. Zusammenfassung</h2>
+<p>Das Skript kombiniert einfache Geräte- und Orientierungsheuristiken mit spezifischen iOS-Korrekturen, um ein konsistentes AR-Modell-Rendering zu liefern und gleichzeitig den Hintergrund nach Videostart transparent zu setzen. Es nutzt Standard-Web-APIs (<code>screen.orientation</code>, <code>matchMedia</code>, <code>MutationObserver</code>) und bleibt ohne externe Abhängigkeiten.</p>
 <hr>
 <p class="small">Um dieses Dokument als PDF zu speichern: Im Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
 </body>

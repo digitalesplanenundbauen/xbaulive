@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Erklärung zur Seite index.html</title>
+<style>
+ body { font-family: system-ui, Arial, sans-serif; line-height: 1.45; margin: 2rem; max-width: 880px; }
+ h1,h2,h3 { line-height: 1.2; }
+ code { background:#f5f5f5; padding:2px 4px; border-radius:4px; font-size:90%; }
+ pre { background:#f5f5f5; padding:0.75rem 1rem; overflow:auto; border-radius:6px; }
+ .small { font-size:0.85rem; color:#444; }
+</style>
+</head>
+<body>
+<h1>Ausführliche Erklärung der Datei <code>index.html</code></h1>
+<p>Diese Datei stellt einen kompakten 3D‑Viewer bereit. Sie lädt A‑Frame, zeigt Kopf-/Fußbereich der Seite, rendert ein GLB‑Modell in einer eingebetteten Szene und verdrahtet Maus‑/Touch‑Steuerung sowie die Navigation zur Live‑Ansicht.</p>
+
+<hr>
+<h2>1. Kopfbereich (Head)</h2>
+<ul>
+  <li><strong>Meta &amp; Viewport:</strong> Setzt <code>charset</code>, verhindert Nutzer‑Zoom (<code>maximum-scale</code>, <code>user-scalable=no</code>), legt Farbmodus fest (<code>color-scheme: light</code>).</li>
+  <li><strong>Noindex:</strong> <code>robots=noindex</code> verhindert Indexierung durch Suchmaschinen.</li>
+  <li><strong>Styles:</strong> Bindet <code>style.css</code> für Layout und Komponenten.</li>
+  <li><strong>A‑Frame:</strong> Lädt <code>aframe.min.js</code> (v1.7.1) als Rendering‑Engine.</li>
+  <li><strong>Titel:</strong> „Technologiepark &amp; Studierendenzentrum – Viewer“.</li>
+ </ul>
+<p class="small">Stylesheet‑Erklärung: <a href="style-explanation.html">docs/style-explanation.html</a></p>
+
+<hr>
+<h2>2. Sensor‑Popup</h2>
+<ul>
+  <li><strong>Markup:</strong> <code>#sensor-popup</code> mit Hinweistext und Button <code>#sensor-popup-ok</code>.</li>
+  <li><strong>Initialzustand:</strong> <code>display:none</code>; Sichtbarkeit wird im Skript gesteuert.</li>
+  <li><strong>Zweck:</strong> Informiert Nutzer über benötigte Sensorzugriffe (relevant für Live‑Ansicht).</li>
+</ul>
+
+<hr>
+<h2>3. Kopfzeile (Header)</h2>
+<ul>
+  <li><strong>Struktur:</strong> <code>.header-inner</code> mit Projekttitel und Logo (<code>images/thlogoweiss.svg</code>).</li>
+  <li><strong>Barrierefreiheit:</strong> Logo trägt <code>alt</code>‑Text.</li>
+</ul>
+
+<hr>
+<h2>4. Hauptbereich (Main) mit Szene</h2>
+<ul>
+  <li><strong>Scene:</strong> <code>&lt;a-scene embedded xr-mode-ui="enabled:false"&gt;</code> zeigt eine eingebettete Szene ohne XR‑UI.</li>
+  <li><strong>Licht:</strong> Ambient‑ und Directional‑Lights für Grundbeleuchtung.</li>
+  <li><strong>Modell‑Entity:</strong> <code>#model</code> dient als Ziel für GLB‑Laden.</li>
+  <li><strong>Kamera‑Entity:</strong> <code>#cam</code> mit <code>camera</code>; Standard‑Controls deaktiviert (eigene Steuerung folgt per Skript).</li>
+</ul>
+
+<hr>
+<h2>5. Fußbereich (Footer)</h2>
+<ul>
+  <li><strong>Live‑Button:</strong> <code>#liveBtn</code> leitet zur Live‑Seite <code>live.html</code> weiter.</li>
+  <li><strong>Info:</strong> Zusätzlicher Text mit Labor‑Hinweis.</li>
+</ul>
+
+<hr>
+<h2>6. Inline‑Skript: Kurzüberblick</h2>
+<ul>
+  <li><strong>Popup:</strong> Blendet den Sensors‑Hinweis je nach URL‑Parameter ein/aus (<code>hideSensorPopup=1</code>).</li>
+  <li><strong>Modell &amp; Kamera:</strong> Lädt das GLB, zentriert das Modell und stellt die Kamera‑Distanz FOV‑basiert ein.</li>
+  <li><strong>Bedienung:</strong> Implementiert Rotation per Drag sowie Zoom via Mausrad/Pinch.
+  </li>
+  <li><strong>Navigation:</strong> Button <code>#liveBtn</code> öffnet die Live‑Ansicht <code>live.html</code>.</li>
+</ul>
+<p class="small">Die vollständige Erläuterung der Inline‑Skripte: <a href="index-js-explanation.html">docs/index-js-explanation.html</a></p>
+ 
+
+<hr>
+ 
+
+<p class="small">Um dieses Dokument als PDF zu speichern: Im Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
+</body>
+</html>

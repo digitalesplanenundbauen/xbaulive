@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Erklärung des JavaScript in gps-toggle.js</title>
+<style>
+ body { font-family: system-ui, Arial, sans-serif; line-height: 1.45; margin: 2rem; max-width: 880px; }
+ h1,h2,h3 { line-height: 1.2; }
+ code { background:#f5f5f5; padding:2px 4px; border-radius:4px; font-size:90%; }
+ pre { background:#f5f5f5; padding:0.75rem 1rem; overflow:auto; border-radius:6px; }
+ .block { margin-bottom:2.2rem; }
+ .small { font-size:0.85rem; color:#444; }
+</style>
+</head>
+<body>
+<h1>Ausführliche Erklärung des Skripts <code>js/gps-toggle.js</code></h1>
+<p>Dieses Dokument beschreibt die Logik zur Umschaltung zwischen <strong>Simulations‑GPS</strong> und <strong>echtem GPS</strong> in der Live‑Ansicht. Es konfiguriert die bestehende Kamera, aktualisiert UI‑Status und hält das Kameravideo stabil.</p>
+ 
+<hr>
+
+<h2>1. Ziel und Grundprinzip</h2>
+<ul>
+ <li><strong>Umschalten:</strong> Der Button <code>#gpsBtn</code> toggelt den Zustand <code>gpsOn</code> (false=Simulation, true=echtes GPS).</li>
+ <li><strong>Kamera beibehalten:</strong> Die <code>#cam</code> wird nicht neu erstellt; nur das <code>gps-camera</code>-Attribut wird umkonfiguriert.</li>
+ <li><strong>Modellposition:</strong> In Simulation leicht versetzt (<code>-20 -4 -10</code>), bei echtem GPS <code>0 0 0</code>.</li>
+ <li><strong>Status/Titel:</strong> Buttonlabel, Statusbox (<code>#gps-status</code>) und <code>document.title</code> werden kontextabhängig aktualisiert.</li>
+</ul>
+
+<hr>
+<h2>2. Zentrale Konfiguration</h2>
+<pre><code>const CONFIG = {
+  sim: {
+    lat: 47.866880722,
+    lon: 12.109128178,
+    modelPosition: '-20 -4 -10',
+    title: '... - Simulation',
+    buttonLabel: 'GPS ein'
+  },
+  real: {
+    gpsCameraAttr: 'positionMinAccuracy: 50; gpsMinDistance: 2; gpsTimeInterval: 0; simulateLatitude: 0; simulateLongitude: 0; simulateAltitude: 0;',
+    modelPosition: '0 0 0',
+    title: '... - GPS Aktiv',
+    buttonLabel: 'GPS aus'
+  },
+  statusVisibleWhenOn: true
+};</code></pre>
+<ul>
+ <li><strong>Simulation:</strong> Setzt <code>simulateLatitude/Longitude</code> und versetzt das Modell für eine bessere Sicht.</li>
+ <li><strong>Echt‑GPS:</strong> Parameter für Genauigkeit/Abstand; Simulation wird deaktiviert.</li>
+</ul>
+
+<hr>
+<h2>3. Kernfunktionen</h2>
+<h3>3.1 applyGPS()</h3>
+<pre><code>function applyGPS(){
+  const cam = document.getElementById('cam');
+  const modelEntity = document.getElementById('modelEntity');
+  if (!cam || !modelEntity) return;
+
+  try { if (!cam.hasAttribute('look-controls')) cam.setAttribute('look-controls', 'reverseMouseDrag: true'); } catch(e) {}
+  try { cam.removeAttribute('gps-camera'); } catch(e) {}
+
+  if (gpsOn) {
+    cam.setAttribute('gps-camera', CONFIG.real.gpsCameraAttr);
+    modelEntity.setAttribute('position', CONFIG.real.modelPosition);
+  } else {
+    cam.setAttribute('gps-camera', `simulateLatitude: ${CONFIG.sim.lat}; simulateLongitude: ${CONFIG.sim.lon};`);
+    modelEntity.setAttribute('position', CONFIG.sim.modelPosition);
+  }
+
+  setTimeout(() => rebindPlacesToCamera(cam), 0);
+  resumeVideoIfPaused();
+}</code></pre>
+<ul>
+ <li><strong>Neu-Konfiguration:</strong> Entfernt das alte Attribut und setzt neue Werte passend zum Modus.</li>
+ <li><strong>Rebinding:</strong> Bindet <code>gps-entity-place</code> erneut an die aktive <code>gps-camera</code>-Komponente.</li>
+ <li><strong>Video‑Resume:</strong> Startet das Kameravideo neu, falls es pausiert wurde.</li>
+</ul>
+
+<h3>3.2 rebindPlacesToCamera()</h3>
+<pre><code>function rebindPlacesToCamera(camEl){
+  const gpsComp = camEl?.components?.['gps-camera'];
+  document.querySelectorAll('[gps-entity-place]').forEach((el)=>{
+    const place = el.components && el.components['gps-entity-place'];
+    if (place) {
+      place._cameraGps = gpsComp || null;
+      try { place._updatePosition(); } catch(e) {}
+    }
+  });
+}</code></pre>
+<ul>
+ <li><strong>Zweck:</strong> Stellt sicher, dass alle GPS‑Entities die aktualisierte Kamera benutzen.</li>
+</ul>
+
+<h3>3.3 resumeVideoIfPaused()</h3>
+<pre><code>function resumeVideoIfPaused(){
+  const v = document.querySelector('video');
+  if (!v) return;
+  try {
+    v.setAttribute('playsinline','');
+    v.setAttribute('webkit-playsinline','');
+    v.muted = true; v.autoplay = true;
+  } catch(e) {}
+  try {
+    if (v.paused) { const p = v.play(); p?.catch(()=>{}); }
+    const stream = v.srcObject; stream?.getVideoTracks?.().forEach(tr => { if (tr && tr.enabled === false) tr.enabled = true; });
+  } catch(e) {}
+}</code></pre>
+<ul>
+ <li><strong>iOS/Android:</strong> Erzwingt Inline‑Wiedergabe und aktiviert ggf. deaktivierte Video‑Tracks.</li>
+</ul>
+
+<h3>3.4 setupVideoKeepAlive()</h3>
+<pre><code>function setupVideoKeepAlive(v){
+  if (!v || v.__keepAliveSetup) return;
+  v.__keepAliveSetup = true;
+  try {
+    v.setAttribute('playsinline','');
+    v.setAttribute('webkit-playsinline','');
+    v.muted = true; v.autoplay = true;
+  } catch(e) {}
+  const tryPlay = () => setTimeout(resumeVideoIfPaused, 50);
+  ['pause','stalled','suspend','waiting','emptied','abort','ended'].forEach(ev=>v.addEventListener(ev, tryPlay));
+  ['loadeddata','canplay','playing'].forEach(ev=>v.addEventListener(ev, ()=>{}, { once:false }));
+}</code></pre>
+<ul>
+ <li><strong>Keep‑Alive:</strong> Verdrahtet Wiedergabe‑Events, um das Video bei Störungen automatisch neu zu starten.</li>
+</ul>
+
+<hr>
+<h2>4. Initialisierung und Ereignisse</h2>
+<pre><code>const onSceneReady = () => {
+  applyGPS();
+  const v0 = document.querySelector('video');
+  if (v0) setupVideoKeepAlive(v0);
+  const mo = new MutationObserver(ms=>{
+    for (const m of ms) for (const n of m.addedNodes) if (n && n.nodeName === 'VIDEO') setupVideoKeepAlive(n);
+  });
+  try { mo.observe(document.body, { childList:true, subtree:true }); } catch(e) {}
+
+  gpsBtn?.addEventListener('click', () => { gpsOn = !gpsOn; applyGPS(); setTimeout(resumeVideoIfPaused, 300); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(resumeVideoIfPaused, 200); });
+  window.addEventListener('orientationchange', () => setTimeout(resumeVideoIfPaused, 300));
+};
+
+if (scene && scene.hasLoaded) onSceneReady();
+else if (scene) scene.addEventListener('loaded', onSceneReady, { once: true });
+else window.addEventListener('DOMContentLoaded', onSceneReady, { once: true });</code></pre>
+<ul>
+ <li><strong>MutationObserver:</strong> Erkennt später hinzugefügte <code>&lt;video&gt;</code>‑Elemente und richtet Keep‑Alive ein.</li>
+ <li><strong>UI‑Interaktionen:</strong> Button‑Klick, Sichtbarkeits‑ und Orientierungs‑Events lösen Video‑Resume aus.</li>
+</ul>
+
+<hr>
+<h2>5. GPS‑Statusbox Positionierung</h2>
+<pre><code>function positionGpsStatus() {
+  const header = document.querySelector('header');
+  const box = document.getElementById('gps-status');
+  if (header && box) {
+    const rect = header.getBoundingClientRect();
+    box.style.top = (rect.bottom + 10) + 'px';
+  }
+}
+window.addEventListener('resize', positionGpsStatus);
+window.addEventListener('DOMContentLoaded', positionGpsStatus);</code></pre>
+<ul>
+ <li><strong>Layout:</strong> Fixiert die Statusbox unter dem Header und aktualisiert die Position bei <code>resize</code>.</li>
+</ul>
+
+<hr>
+<p class="small">Um dieses Dokument als PDF zu speichern: Im Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
+</body>
+</html>

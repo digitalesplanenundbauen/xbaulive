@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Übersicht – xbau live</title>
+<style>
+ body { font-family: system-ui, Arial, sans-serif; line-height: 1.45; margin: 2rem; max-width: 960px; }
+ h1,h2,h3 { line-height: 1.2; }
+ code { background:#f5f5f5; padding:2px 4px; border-radius:4px; font-size:90%; }
+ pre { background:#f5f5f5; padding:0.75rem 1rem; overflow:auto; border-radius:6px; }
+ ul { margin: 0.25rem 0 1rem; }
+ .small { font-size:0.85rem; color:#444; }
+ .cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin: 1rem 0 2rem; }
+ .card { border:1px solid #e5e7eb; border-radius:8px; padding:12px 14px; background:#fff; }
+ .card h3 { margin: 0 0 8px; font-size: 1.05rem; }
+ .links a { display:inline-block; margin-right:12px; }
+</style>
+</head>
+<body>
+<h1>Übersicht und Erklärung – xbaulive</h1>
+<p>Diese Übersicht beschreibt Aufbau und Nutzung der Anwendung und verweist auf detaillierte Erklärungen zu einzelnen Teilen (Viewer, Live‑AR, GPS‑Umschaltung und Styles). Der Quellcode ist öffentlich einsehbar: <a href="https://github.com/digitalesplanenundbauen/xbaulive" target="_blank" rel="noopener">GitHub – digitalesplanenundbauen/xbaulive</a>.</p>
+
+<hr>
+<h2>1. Zweck & Funktionsumfang</h2>
+<ul>
+  <li><strong>Viewer (index.html):</strong> Zeigt ein GLB‑Modell in einer eingebetteten A‑Frame Szene. Steuerung per Maus/Touch (Rotation, Zoom).</li>
+  <li><strong>Live‑AR (live.html):</strong> Platziert das Modell GPS‑basiert in der Realität (AR.js) mit Umschaltung zwischen Simulations‑GPS und echtem GPS.</li>
+</ul>
+ 
+
+<hr>
+<h2>2. Architektur</h2>
+<ul>
+  <li><strong>A‑Frame:</strong> 3D‑Rendering, Szene/Kamera/Entities (<code>&lt;a-scene&gt;</code>, <code>#cam</code>, <code>#model</code> / <code>#modelEntity</code>).</li>
+  <li><strong>three.js:</strong> Basis‑3D‑Bibliothek (von A‑Frame/AR.js genutzt).</li>
+  <li><strong>AR.js (Location‑Only):</strong> GPS‑Komponenten (<code>gps-entity-place</code>, <code>gps-camera</code>) für Standort‑Platzierung.</li>
+  <li><strong>Assets:</strong> GLB unter <code>assets/</code>, Logo/Grafiken unter <code>images/</code>.</li>
+</ul>
+
+<hr>
+<h2>3. Viewer (index.html)</h2>
+<ul>
+  <li>Embedded Szene ohne XR‑UI.</li>
+  <li>Maus/Touch‑Steuerung: Drag‑Rotation, Wheel/Pinch‑Zoom.</li>
+  <li>Navigation zur Live‑Ansicht.</li>
+</ul>
+<p class="links">
+  <a href="index-explanation.html">Seiten‑Erklärung</a>
+  <a href="index-js-explanation.html">JavaScript‑Erklärung</a>
+</p>
+<hr>
+<h2>4. Live‑AR (live.html)</h2>
+<ul>
+  <li>A‑Frame + AR.js (Webcam/VideoTexture, Location‑Only).</li>
+  <li>GPS‑Statusanzeige, iOS‑Orientierung/Skalierung, Transparenz.</li>
+  <li>Externe Umschaltung über <code>js/gps-toggle.js</code>.</li>
+</ul>
+<p class="links">
+  <a href="live-explanation.html">Seiten‑Erklärung</a>
+  <a href="live-js-explanation.html">JavaScript‑Erklärung</a>
+</p>
+
+<hr>
+<h2>5. Skripte & Styles</h2>
+<h3>js/gps-toggle.js</h3>
+<ul>
+  <li>Umschalten zwischen Simulations‑GPS und echtem GPS, Rebinding von <code>gps-entity-place</code>, Video‑Keep‑Alive.</li>
+</ul>
+<p class="links"><a href="gps-toggle-js-explanation.html">GPS‑Umschaltung – Erklärung</a></p>
+
+<h3>style.css</h3>
+<ul>
+  <li>Seiten‑Grid (Header/Inhalt/Footer), Buttons, Popup‑Overlay, GPS‑Statusbox.</li>
+  <li>Transparente Szene für AR‑Hintergrund.</li>
+</ul>
+<p class="links"><a href="style-explanation.html">Stylesheet – Erklärung</a></p>
+
+<hr>
+<h2>6. Nutzung & Hinweise</h2>
+<ul>
+  <li><strong>Viewer:</strong> Rotieren per Ziehen (Maus/Touch); zoomen per Mausrad oder Zweifinger‑Pinch.</li>
+  <li><strong>Live‑AR:</strong> Standard: Simulation aktiv. Tippe <code>GPS ein</code>, um echtes GPS zu nutzen (Berechtigungsdialog erscheint ggf.).</li>
+  <li><strong>Kamera & Standort:</strong> Browserberechtigungen erforderlich (Mobilgerät empfohlen).</li>
+  <li><strong>Rotation:</strong> iOS‑Geräte erhalten interne Ausgleichswerte; Bildschirmrotation kann Verhalten beeinflussen.</li>
+</ul>
+
+<hr>
+<h2>7. Plakat - Neubau Technologiepark</h2>
+<ul>
+  <li>Das PDF dient der Präsentation; der QR‑Code führt direkt zur Anwendung (Viewer) im mobilen Browser. <br> </li>
+ </ul>
+<a href="plakat-neubau-technologiepark.pdf" target="_blank" rel="noopener">plakat‑neubau‑technologiepark.pdf</a>
+
+
+<p class="small">Als PDF speichern: Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
+</body>
+</html>

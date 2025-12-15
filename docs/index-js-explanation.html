@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Erklärung des JavaScript in index.html</title>
+<style>
+ body { font-family: system-ui, Arial, sans-serif; line-height: 1.45; margin: 2rem; max-width: 880px; }
+ h1,h2,h3 { line-height: 1.2; }
+ code { background:#f5f5f5; padding:2px 4px; border-radius:4px; font-size:90%; }
+ pre { background:#f5f5f5; padding:0.75rem 1rem; overflow:auto; border-radius:6px; }
+ .block { margin-bottom:2.2rem; }
+ .small { font-size:0.85rem; color:#444; }
+</style>
+</head>
+<body>
+<h1>Ausführliche Erklärung des JavaScript in <code>index.html</code></h1>
+<p>Dieses Dokument erläutert die Logik des eingebetteten Skripts in <code>index.html</code>: <strong>Sensor-Popup</strong>, <strong>3D-Viewer Initialisierung</strong>, <strong>Modell-Anpassung</strong>, <strong>Maus-/Touch-Steuerung</strong> und <strong>Navigation zur Live-Ansicht</strong>.</p>
+ 
+<hr>
+
+<h2>1. Sensor-Popup</h2>
+<pre><code>function shouldShowPopup() {
+  return !/hideSensorPopup=1/.test(location.search);
+}
+if (shouldShowPopup()) {
+  document.getElementById('sensor-popup').style.display = '';
+}
+document.getElementById('sensor-popup-ok').onclick = function() {
+  document.getElementById('sensor-popup').style.display = 'none';
+};</code></pre>
+<ul>
+ <li><strong>Anzeige:</strong> Das Popup wird gezeigt, sofern die URL <code>hideSensorPopup=1</code> nicht enthält.</li>
+ <li><strong>Schließen:</strong> Der <code>Ok</code>-Button blendet das Popup aus.</li>
+ <li><strong>Zweck:</strong> Informiert über benötigte Sensorzugriffe (für die Live-Ansicht).</li>
+</ul>
+
+<hr>
+<h2>2. 3D-Viewer: Szene, Modell und Kamera</h2>
+<pre><code>const scene = document.querySelector('a-scene');
+const model = document.getElementById('model');
+const cam   = document.getElementById('cam');
+const GLB_URL = './assets/gameobjectohnekellerreduziert.glb';</code></pre>
+<ul>
+ <li><code>a-scene</code>: Eingebettete A-Frame Szene mit deaktivierter XR-UI.</li>
+ <li><code>#model</code>: Platzhalter-Entity für das GLB-Modell.</li>
+ <li><code>#cam</code>: Eigene Kamera-Entity; <code>look-controls</code>/<code>wasd-controls</code> sind deaktiviert, da die Steuerung manuell erfolgt.</li>
+</ul>
+
+<h3>2.1 Steuerungsparameter & Hilfsfunktionen</h3>
+<pre><code>const rotSpeed = 0.3; // deg per px
+const zoomMin = 0.5, zoomMax = 200, pinchFactor = 0.5;
+let isDragging=false, lastX=0, lastY=0, lastPinch=null;
+function clamp(v,a,b){ return Math.min(b, Math.max(a,v)); }
+function getRot(){ const r=model.getAttribute('rotation'); return {x:r.x,y:r.y,z:r.z}; }
+function setRot(x,y,z){ model.setAttribute('rotation', `${x} ${y} ${z}`); }
+function getZ(){ return cam.object3D.position.z; }
+function setZ(z){ cam.object3D.position.z = clamp(z, zoomMin, zoomMax); }</code></pre>
+<ul>
+ <li><strong>Rotation:</strong> Geschwindigkeit pro Pixel; X-Rotation wird auf <code>[-89, 89]</code> begrenzt.</li>
+ <li><strong>Zoom:</strong> Kamera-Z Koordinate wird zwischen <code>zoomMin</code> und <code>zoomMax</code> geklemmt.</li>
+ <li><strong>Hilfsfunktionen:</strong> Lesen/Setzen der Modellrotation und Kameradistanz.</li>
+</ul>
+
+<h3>2.2 Modell laden</h3>
+<pre><code>function loadGLB(){
+  model.setAttribute('gltf-model', GLB_URL);
+  model.addEventListener('model-loaded', fitView, { once:true });
+}</code></pre>
+<ul>
+ <li><strong>GLTF:</strong> Bindet das GLB unter <code>GLB_URL</code> an die Modell-Entity.</li>
+ <li><strong>Event:</strong> Nach dem Laden wird die Kamera/Modell-Ausrichtung mit <code>fitView</code> berechnet.</li>
+</ul>
+
+<h3>2.3 Kamera auf Modell anpassen</h3>
+<pre><code>function fitView(){
+  const mesh = model.getObject3D('mesh'); if (!mesh) return;
+  mesh.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  model.object3D.position.copy(center.multiplyScalar(-1));
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const fov = (cam.getObject3D('camera').fov || 60) * Math.PI/180;
+  const dist = (maxDim/2)/Math.tan(fov/2) + maxDim*0.25;
+  setZ(dist);
+}</code></pre>
+<ul>
+ <li><strong>Bounding-Box:</strong> Berechnet Größe/Zentrum des Modells mit <code>THREE.Box3</code>.</li>
+ <li><strong>Centering:</strong> Verschiebt das Modell so, dass dessen Zentrum bei <code>(0,0,0)</code> liegt.</li>
+ <li><strong>Distanz:</strong> Setzt die Kamera-Z so, dass das Modell bequem ins Sichtfeld passt (FOV-basiert, kleiner Puffer).</li>
+</ul>
+
+<hr>
+<h2>3. Benutzersteuerung (Maus &amp; Touch)</h2>
+<pre><code>function bindControls(){
+  const canvas = scene.canvas; if (!canvas) return;
+  canvas.addEventListener('pointerdown', e=>{ isDragging=true; lastX=e.clientX; lastY=e.clientY; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e=>{
+    if (!isDragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+    const r=getRot(); setRot(clamp(r.x + dy*rotSpeed, -89, 89), r.y + dx*rotSpeed, r.z);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>canvas.addEventListener(t,()=>{isDragging=false;}));
+  canvas.addEventListener('wheel', e=>{ e.preventDefault(); setZ(getZ() + e.deltaY*0.01); }, {passive:false});
+  canvas.addEventListener('touchstart', e=>{ if (e.touches.length===1){ lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; isDragging=true; lastPinch=null; } else if (e.touches.length===2){ isDragging=false; lastPinch=dist(e.touches[0], e.touches[1]); } }, {passive:false});
+  canvas.addEventListener('touchmove', e=>{ e.preventDefault(); if (e.touches.length===1 && isDragging){ const t=e.touches[0]; const dx=t.clientX-lastX, dy=t.clientY-lastY; lastX=t.clientX; lastY=t.clientY; const r=getRot(); setRot(clamp(r.x + dy*rotSpeed, -89, 89), r.y + dx*rotSpeed, r.z); } else if (e.touches.length===2){ const d=dist(e.touches[0], e.touches[1]); if (lastPinch!=null){ setZ(getZ() + (lastPinch-d)*pinchFactor); } lastPinch=d; } }, {passive:false});
+  canvas.addEventListener('touchend', ()=>{ isDragging=false; lastPinch=null; });
+  function dist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+}</code></pre>
+<ul>
+ <li><strong>Rotation (Drag):</strong> <code>pointermove</code> rotiert das Modell um X/Y basierend auf Cursor-/Touch-Bewegung.</li>
+ <li><strong>Zoom (Wheel):</strong> Mausrad ändert die Kamera-Z (<code>preventDefault</code>, <code>passive:false</code>).</li>
+ <li><strong>Pinch-Zoom:</strong> Zweifinger-Geste verändert Z mittels Distanzänderung der Touches.</li>
+ <li><strong>Sicherheit:</strong> Pointer-Capture auf <code>pointerdown</code>; Limits via <code>clamp</code>.</li>
+</ul>
+
+<hr>
+<h2>4. Initialisierung & Navigation</h2>
+<pre><code>if (scene.hasLoaded) afterScene(); else scene.addEventListener('loaded', afterScene);
+function afterScene(){ loadGLB(); bindControls(); }
+
+document.getElementById('liveBtn')?.addEventListener('click', ()=>{ location.href = 'live.html'; });</code></pre>
+<ul>
+ <li><strong>Init:</strong> Nach Szenen-Ladeereignis werden Modell geladen und Controls gebunden.</li>
+ <li><strong>Navigation:</strong> Der Button <code>#liveBtn</code> öffnet die Live-Ansicht <code>live.html</code>.</li>
+</ul>
+
+ 
+<p class="small">Um dieses Dokument als PDF zu speichern: Im Browser öffnen &gt; Druckdialog (<kbd>Strg</kbd>+<kbd>P</kbd> / <kbd>Cmd</kbd>+<kbd>P</kbd>) &gt; Ziel: "Als PDF speichern".</p>
+</body>
+</html>
